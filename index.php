@@ -4,7 +4,7 @@ require_once("nfkmap.class.php");
 require_once("bmp.class.php");
 
 $maps_path = "maps\\";
-$map_file = "castle-ctf.mapa";
+$map_file = "Jzombi3.mapa";
 
 $filename = $maps_path . $map_file;
 

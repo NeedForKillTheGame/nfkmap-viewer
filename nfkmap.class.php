@@ -20,18 +20,18 @@ class NFKMap
 	// map locations
 	private $locations = array();
 	
-	// map palette image
+	// map palette gd object
 	var $palette; 
 	
-	// has map own palette?
+	// map own palette gd object
 	var $custom_palette = false;
 	// palette transparent color
 	var $transparent_color = false;
 	
-	// final map image that can be saved
-	var $map_image; 
+	// final map gd object that can be saved
+	var $image; 
 	
-	// map binary stream
+	// map origin binary stream
 	var $stream = '';
 	
 	// const
@@ -67,14 +67,17 @@ class NFKMap
 		if (!$filename)
 			$filename = $this->getFileName() . ".png";
 			
-		imagepng($this->map_image, $filename);
+		
+		// TODO: save thumbnail (optional)
+	
+		imagepng($this->image, $filename);
 	}
 
 	// return map image bytes
 	public function ShowImage()
 	{
 		header("Content-Type: image/png");
-		imagepng($this->map_image);
+		imagepng($this->image);
 		#return ob_get_contents(); // return bytes
 	}	
 	
@@ -175,22 +178,28 @@ class NFKMap
 				if ($this->debug)
 					echo "<br>pal start: " . $this->pos;
 				
-				// set transparent color if enabled
-				if ($entry->Reserved6)
-					$this->transparent_color = inverseHex( dechex($entry->Reserved5) );
-				
+
 				// image binary
 				$pal_gzip = $this->getString($entry->DataSize);
 				$pal_bin = bzdecompress($pal_gzip);
 				
 				// create gd object of palette
 				$this->custom_palette = imagecreatefrombmpstream($pal_bin);
+
+				// set transparent color if enabled
+				if ($entry->Reserved6)
+				{
+					$this->transparent_color = dechex($entry->Reserved5);
+					
+					// set transparent color to gd object
+					$color = hexcoloralloc($this->custom_palette, $this->transparent_color);
+					imagecolortransparent($this->custom_palette, $color);
+				}
 				
 			
 				if ($this->debug) // (save palette to file)
 					file_put_contents("palette_map.bmp", $pal_bin);
 				# debug	// TODO: load bmp from castle-ctf? find another code?
-				$this->custom_palette = imagecreatefrombmp("palette_map.bmp");
 				imagebmp($this->custom_palette, "palette_map2.bmp");
 			}
 			elseif ($entry->EntryType == 'loc')
@@ -205,9 +214,9 @@ class NFKMap
 					$loc = new TLocationText();
 					
 					$loc->enabled = $this->getBool();
-						$this->getByte(); // byte alignment (ignore)
 					$loc->x = $this->getByte();
 					$loc->y = $this->getByte();
+						$this->getByte(); // 0x0F header of string (ignore)
 					$loc->text = $this->cutString( $this->getString(64), 0xF4 );
 					
 					$this->locations[$i] = $loc;
@@ -224,22 +233,24 @@ class NFKMap
 		// load default palette from the file
 		$this->palette = $this->loadPalette("palette_default.png");
 		
-		$this->image = $this->drawMap();
+		$this->drawMap();
 		
 	}
-	
-
-	
-	
 	
 	// open default palette
 	function loadPalette($filename)
 	{
-		return imagecreatefrompng($filename);
-	}
+		$pal = imagecreatefrompng($filename);
+		
+		// set transparent color
+		$color = imagecolorat($pal, 0, 0); // get first pixel color
+		imagecolortransparent($pal, $color);
 
+		return $pal;
+	}
 	
-	// draw map in $this->map_image
+	
+	// draw map in $this->image
 	function drawMap()
 	{
 		$width = $this->header->MapSizeX * $this->brick_w;
@@ -247,9 +258,10 @@ class NFKMap
 
 		
 		// create map layer
-		$this->map_image = imagecreatetruecolor($width, $height);
+		$this->image = imagecreatetruecolor($width, $height);
+		$this->fillBackground($this->image, "bg_8.jpg");
 		
-		
+		// draw bricks
 		for ($x = 0; $x < $this->header->MapSizeX; $x++)
 			for ($y = 0; $y < $this->header->MapSizeY; $y++)
 			{
@@ -258,31 +270,86 @@ class NFKMap
 					continue;
 			
 				$brick = $this->getBrickImageByIndex($this->bricks[$x][$y]);
-				imagecopy($this->map_image, $brick, $x * $this->brick_w, $y * $this->brick_h, 0, 0, $this->brick_w, $this->brick_h);
+				
+				// transparent for water(31) and lava(32)
+				$transparency = ($this->bricks[$x][$y] == 31 || $this->bricks[$x][$y] == 32) ? 75 : 100;
+				
+				imagecopymerge($this->image, 
+					$brick, $x * $this->brick_w, 
+					$y * $this->brick_h, 
+					0, 
+					0,
+					$this->brick_w, $this->brick_h, $transparency);
 			}
 		
-		// TODO: display special objects (teleport, door, coloured button)
+		
+		// enable antialiasing (smooth teleport lines)
+		#imageantialias($this->image, true);
+		
+		// draw special objects
+		foreach ($this->objects as $obj)
+		{
+			if (!$obj->active)
+				continue;
+				
+			switch ($obj->objtype)
+			{
+				// teleport
+				case 1:
+					$im = imagecreatefrompng("portal.png"); // FIXME: take out from the iteration
+					imagecopy($this->image, $im, 
+						$obj->x * $this->brick_w - $this->brick_w / 2, 
+						$obj->y * $this->brick_h - $this->brick_h * 2, 
+						0, 
+						0, 
+						imagesx($im), imagesy($im) );
+
+					// draw arrow to goto position
+					arrow($this->image, 
+						$obj->x * $this->brick_w + $this->brick_w / 2, // x
+						$obj->y * $this->brick_h, // y
+						$obj->lenght * $this->brick_w + $this->brick_w / 2, // goto x
+						$obj->dir * $this->brick_h, // goto y
+						5, 1,
+						imagecolorallocatealpha($this->image, 255, 255, 255, 50) );
+					break;
+			}
+		}
+		
+		/*
+		// draw locations
+		foreach ($this->locations as $loc)
+		{
+			if (!$loc->enabled)
+				continue;
+		
+			imagefilledellipse($this->image, 
+				$loc->x * $this->brick_w, // x
+				$loc->y * $this->brick_h, // y
+				500, 500, // radius
+				imagecolorallocatealpha($this->image, 200, 200, 200, 99) );
+			
+			// TODO: draw $this->text
+		}
+		*/
 		
 	}
 	
 	// return brick image object by it's index in palette
 	function getBrickImageByIndex($index)
 	{
-		// FIXME: may be move transparent code on_palette_initialize?
 		$pal = $this->palette;
-		$hexcolor = '808080';
-		
-		if ($index >= 54 && $index <= 181 )
+
+		if ($index >= 54 && $index <= 181)
 		{
-			$index -= 54;
-			$pal = $this->custom_palette;
-			$hexcolor = $this->transparent_color;
+			if ($this->custom_palette)
+			{
+				$pal = $this->custom_palette;
+				$index -= 54;
+			}
+			else
+				$index -= 7;
 		}
-		// FIXME: set transparent color of palette (it doesn't work)
-		$color = hexcoloralloc($pal, $hexcolor);
-		imagecolortransparent($pal, $color);
-	
-		// TODO: transparent bricks where water illusion object is set (or just water(31) and lava(32))
 	
 		// palette size: 8 x 32 bricks
 		$x = $index % 8 * $this->brick_w;
@@ -293,13 +360,29 @@ class NFKMap
 		// copy brick from the palette
 		imagecopy($brick, $pal, 0, 0, $x, $y, $this->brick_w, $this->brick_h);
 		
+		// get transparent color of palette
+		$color = imagecolortransparent($pal); // FIXME: doesn't work with bmp
+		
+
+		
+		// set brick transparent color
+		imagecolortransparent($brick, $color);
+		
+		
 		#if ($this->debug) // save each brick as single image
 		#imagepng($brick, "bricks\\$index.png");
 		
 		return $brick;
 	}
 	
-	
+	// fill image with repeated background
+	function fillBackground(&$im, $filename)
+	{
+		$bg = imagecreatefromjpeg($filename);
+		for ($x = 0; $x < imagesx($im) / imagesx($bg); $x++ )
+			for ($y = 0; $y < imagesy($im) / imagesy($bg); $y++ )
+				imagecopy($im, $bg, $x * imagesx($bg), $y * imagesy($bg), 0, 0, imagesx($bg), imagesy($bg));
+	}
 	
 	
 	
@@ -322,7 +405,16 @@ class NFKMap
 	// word = 2, longword = 4
 	function getWord($long = false)
 	{
-		return $this->getInt($long);
+		$len = !$long ? 2 : 4;
+		$data = $this->read($len);
+
+		// convert to int with reading little endian
+		$value = unpack("S*", $data);
+		
+		if ($value)
+			return $value[1] ;
+		else
+			return 0;
 	}
 	function getString($len)
 	{
@@ -355,10 +447,9 @@ class NFKMap
 		
 		return $data;
 	}
+
 	
-	
-	
-	// cut string before specified byte
+	// cut string from start to specified byte
 	function cutString($str, $byte = 0x00)
 	{
 		for ($i = 0; $i < strlen($str); $i++)
@@ -369,7 +460,7 @@ class NFKMap
 		return $str;
 	}
 		
-	// return map name from filename (without extension)
+	// return map name from file name (without extension)
 	function getFileName()
 	{
 		$filename = basename($this->filename);
@@ -377,14 +468,20 @@ class NFKMap
 	}
 	
 
-	
 	function __destruct()
 	{
 		if ($this->handle)
 			fclose($this->handle);
+		
+		if ($this->palette)
+			imagedestroy($this->palette);
+			
+		if ($this->custom_palette)
+			imagedestroy($this->custom_palette);
+			
+		if ($this->image)
+			imagedestroy($this->image);
 	}
-	
-	
 }
 
 
@@ -432,12 +529,4 @@ class TLocationText
 	public $x, $y; // byte
 	public $text; // string[64]
 }
-
-
-
-
-
-
-
-
 

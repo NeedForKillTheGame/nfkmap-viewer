@@ -12,6 +12,8 @@
 
 2) Массив "бриков". Поочередно, по одному байту считываются по колонкам слева направо:
 
+	bbb : array [0..254,0..254] of TBrick; // массив бриков (карта)
+	 
 	for y := 0 to header.MapSizeY - 1 do begin
 		f.read(buf,header.MapSizeX);
 		for x := 0 to header.MapSizeX - 1 do
@@ -31,6 +33,8 @@
 	Считываются поочередно в массив типа TMAPOBJ:
 	(байты выравнивания появляются из-за того, что тип record, а не packed record)
 
+	ddd : array[0..255] of TMAPOBJV2;       // массив специальных объектов
+	  
 	type TMAPOBJ2 = record
         active : boolean; // 1 байт + 1 байт выравнивания(ignore)
         x,y,lenght,dir,wait : word; // каждый по 2 байта
@@ -69,9 +73,9 @@
 	Сперва считывается TMapEntry, и если  EntryType = loc, то далее считывается TLocationText.
 	
 	Type TLocationText = Packed Record
-		Enabled : boolean; // 1 байт + 1 байт выравнивания(ignore)
+		Enabled : boolean; // 1 байт
 		X, Y : byte; // по 1 байту
-		Text : String [64]; // 64 байта
+		Text : String [64]; // 64 байта + 1 байт перед строкой 0x0F(ignore)
 	end;
 	
 	
