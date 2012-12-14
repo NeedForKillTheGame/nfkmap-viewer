@@ -24,12 +24,14 @@ try
 	$nmap->SaveMapImage(false, basename($filename) ); // false = default file name, basename($filename) = map title in thumbnail
 	
 	// another save examples
-	#$nmap->SaveMapImage( "mymap.png" ); // without thumbnail
-	#$nmap->SaveMapImage( "mymap.png", "thumb title" );
+	#$nmap->SaveMapImage("mapname.png"); // without thumbnail
+	#$nmap->SaveMapImage( "mapname.png", "thumb title" );
 	
 	// another features
-	#$nmap-GetHash(); // md5 hash of the map data
-	#var_dump($header); // display basic map information (author, name, size, background, gametype)
+	#$nmap->SaveMap(); // save original map file
+	#$nmap->SaveMap("mapname.mapa"); // save original map file
+	#echo $nmap-GetHash(); // md5 hash of the map data
+	#var_dump($header); // display map basic information (author, name, size, background, gametype)
 
 	// or display image in a browser
 	#$nmap->ShowImage();
