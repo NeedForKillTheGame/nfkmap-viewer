@@ -102,7 +102,7 @@ NFK Map Viewer
  * Reserved6 - цвет фона, который должен быть прозрачным
  * DataSize - размер байтов, которые необходимо считать далее
  
- Сразу после палитры находится сама картинка, запакованния с помощью GZ - необходимо считать все байты размером DataSize.
+ Сразу после палитры находится сама картинка, запакованная BZip - необходимо считать все байты размером DataSize, затем распаковать данные.
     
  	
 5. **После этого может находиться массив локаций**/
@@ -126,31 +126,31 @@ NFK Map Viewer
 	while F.Position < f.size do begin
 		f.read(entry,sizeof(entry));
 		if entry.EntryType = 'pal' then begin // reading pal
-				CUSTOMPALITRETRANSPARENTCOLOR := Entry.Reserved5;
-				CUSTOMPALITRETRANSPARENT := Entry.Reserved6;
-				CUSTOMPALITRE := TRUE;
+			CUSTOMPALITRETRANSPARENTCOLOR := Entry.Reserved5;
+			CUSTOMPALITRETRANSPARENT := Entry.Reserved6;
+			CUSTOMPALITRE := TRUE;
 
-				decompstr := TMemoryStream.Create;
-				decompstr.clear;
-				PaletteStream.Clear;
-				decompstr.CopyFrom (F, Entry.Datasize);
-				decompstr.position := 0;
-				ProgressCallback := nil;
-				BZDecompress(decompstr,PaletteStream,ProgressCallback);
-				palettestream.Position := 0;
-				decompstr.free;
+			decompstr := TMemoryStream.Create;
+			decompstr.clear;
+			PaletteStream.Clear;
+			decompstr.CopyFrom (F, Entry.Datasize);
+			decompstr.position := 0;
+			ProgressCallback := nil;
+			BZDecompress(decompstr,PaletteStream,ProgressCallback);
+			palettestream.Position := 0;
+			decompstr.free;
 
-				...
+			...
 		end
 		else if entry.EntryType = 'loc' then begin // reading location table.
-				For a := 1 to Entry.DataSize div Sizeof(TLocationText) do
-						f.Read (LocationsArray[a],sizeof(TLocationText));
+			For a := 1 to Entry.DataSize div Sizeof(TLocationText) do
+					f.Read (LocationsArray[a],sizeof(TLocationText));
 		end
 		else f.position := f.position + Entry.DataSize;
-	end;   
+	end;
 </pre>
-	   
-	   
+
 P.S. Вышеприведенный код взят из [исходников NFK Radiant](https://bitbucket.org/pqr/nfk-r2/src/37dd3fe7e9f8ec819d68baa9d595f049ff82de57/EDITOR/radiant040/Unit1.pas) (редактор карт)
+
 
 
