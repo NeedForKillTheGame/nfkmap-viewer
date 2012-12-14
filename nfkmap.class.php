@@ -1,22 +1,48 @@
 <?php
 
+// ----------------------------------------------------------
 // NFK Map Viewer (Need For Kill game map format)
 //
-// Author:	HarpyWar (harpywar@gmail.com)
-// Webpage:	https://github.com/HarpyWar/nfkmap-viewer
-// Version:	14.12.2012
+// Author: HarpyWar (harpywar@gmail.com)
+// Webpage: http://harpywar.com
+// Project page: https://github.com/HarpyWar/nfkmap-viewer
+// Version: 15.12.2012
 // Requirements: PHP >=5.3 with enabled extensions: GD, BZip2
+// ----------------------------------------------------------
 class NFKMap
 {
-	public $filename;
+	/* --- SETUP START --- */
+	
+	// fill map background with repeated image
+	//  value is a number of the file "data/bg_[number].jpg"
+	//  if value == 0, then fill background with black color
+	public $background = false;
+	
+	// replace some item images to better quality (armor, quad, etc.)
+	public $replacefineimages = true;
+	
+	// draw location circles (not good view)
+	public $drawlocations = false;
+	
+	// draw objects like door triggers, arrows, respawns and empty bricks
+	public $drawspecialobjects = true;	
+	
+	// debug flag will show metadata
+	public $debug = false;
+
+	/* --- SETUP END --- */
+	
+	
+	
+	private $filename;
 	
 	// file handle
-	private $f; 
+	private $handle; 
 	// current position
 	private $pos = 0;
 
-	// header
-	private $header = array();
+	// header (map info)
+	public $header = array();
 	// bricks
 	private $bricks = array();
 	// special objects
@@ -27,27 +53,25 @@ class NFKMap
 	private $locations = array();
 	
 	// resources
-	var $res;
+	private $res;
 	
 	// palette transparent color
-	var $transparent_color = false;
+	private $transparent_color = false;
 	
 	// final map gd object that can be saved
-	var $image; 
+	private $image; 
 	
 	// map origin binary stream
-	var $stream = '';
+	private $stream = '';
+	
 	
 	// const
 	private $brick_w = 32;
 	private $brick_h = 16;
 	private $tlocation_size = 68; // size in bytes of one TLocationText structure
-				
-	// debug flag will show metadata
-	private $debug = true;
 
 
-	// open file and get handle
+	// load and parse map stream
 	public function __construct($filename)
 	{
 		if ($this->debug)
@@ -58,9 +82,6 @@ class NFKMap
 		if (!$this->handle = @fopen($this->filename, 'r'))
 			throw new Exception("Can't open file " . $filename);
 	
-		
-		$this->loadResources();
-		
 		$this->loadMap();
 		
 		if ($this->debug)
@@ -69,6 +90,7 @@ class NFKMap
 	}
 
 	// save map image into png file
+	// $thumbnail - map title
 	public function SaveMapImage($filename = false, $thumbnail = false)
 	{
 		if (!$filename)
@@ -80,7 +102,7 @@ class NFKMap
 		if ($thumbnail)
 		{
 			$title = sprintf("%s (%sx%s)", $this->getFileName($thumbnail), $this->header->MapSizeX, $this->header->MapSizeY);
-			$im = resizeImage($this->image, 300, $title);
+			$im = resizeImage($this->image, 350, $title);
 			imagejpeg( $im, $filename . "_thumb.jpg", 75);
 		}
 	}
@@ -109,17 +131,34 @@ class NFKMap
 	// preload image resources
 	function loadResources()
 	{
-		$this->res = new Resources();
+		$this->imres['palette'] = imagecreatefrompng('data/palette.png');
+		// set palette transparent color
+		$color = imagecolorat($this->imres['palette'], 0, 0); // get first pixel color
+		imagecolortransparent($this->imres['palette'], $color);
 		
-		$this->res->palette = imagecreatefrompng("data/palette.png");
-		// set transparent color
-		$color = imagecolorat($this->res->palette, 0, 0); // get first pixel color
-		imagecolortransparent($this->res->palette, $color);
+		if ($this->background)
+			if ( !file_exists('data/' . $this->background) )
+				throw new Exception('Background file data/' . $this->background . ' doesn\'t not exist!');
+			else
+				$this->imres['bg'] = imagecreatefromjpeg('data/' . $this->background);
 		
-		$this->res->bg = imagecreatefromjpeg("data/bg_8.jpg");
-		$this->res->portal = imagecreatefrompng("data/portal.png");
-		$this->res->door = imagecreatefrompng("data/door.png");
-		$this->res->button = imagecreatefrompng("data/button.png");
+		$this->imres['portal'] = imagecreatefrompng('data/portal.png');
+		$this->imres['door'] = imagecreatefrompng('data/door.png');
+		$this->imres['button'] = imagecreatefrompng('data/button.png');
+		
+		if ($this->replacefineimages)
+		{
+			$this->imres['armor'] = imagecreatefrompng('data/armor.png');
+			$this->imres['flag'] = imagecreatefrompng('data/flag.png');
+			$this->imres['fine_battle'] = imagecreatefrompng('data/fine_battle.png');
+			$this->imres['fine_fly'] = imagecreatefrompng('data/fine_fly.png');
+			$this->imres['fine_haste'] = imagecreatefrompng('data/fine_haste.png');
+			$this->imres['fine_invis'] = imagecreatefrompng('data/fine_invis.png');
+			$this->imres['fine_mega'] = imagecreatefrompng('data/fine_mega.png');
+			$this->imres['fine_quad'] = imagecreatefrompng('data/fine_quad.png');
+			$this->imres['fine_regen'] = imagecreatefrompng('data/fine_regen.png');
+			$this->imres['fine_regen'] = imagecreatefrompng('data/fine_regen.png');
+		}
 	}
 	
 	// 040 map version
@@ -226,7 +265,7 @@ class NFKMap
 				$pal_bin = bzdecompress($pal_gzip);
 				
 				// create gd object of palette
-				$this->res->custom_palette = imagecreatefrombmpstream($pal_bin);
+				$this->imres['custom_palette'] = imagecreatefrombmpstream($pal_bin);
 				
 				// set transparent color if enabled
 				if ($entry->Reserved6)
@@ -234,15 +273,15 @@ class NFKMap
 					$this->transparent_color = inverseHex( dechex($entry->Reserved5) );
 					
 					// set transparent color to gd object
-					$color = hexcoloralloc($this->res->custom_palette, $this->transparent_color);
-					imagecolortransparent($this->res->custom_palette, $color);
+					$color = hexcoloralloc($this->imres['custom_palette'], $this->transparent_color);
+					imagecolortransparent($this->imres['custom_palette'], $color);
 				}
 				
 			
 				if ($this->debug) // (save palette to file)
 				{
 					file_put_contents("palette_map.bmp", $pal_bin); // original
-					imagepng($this->res->custom_palette, "palette_map.png"); // handled
+					imagepng($this->imres['custom_palette'], "palette_map.png"); // handled
 				}
 			}
 			elseif ($entry->EntryType == 'loc')
@@ -272,17 +311,16 @@ class NFKMap
 			else // end of file
 				break;
 		}
-
-
-		$this->drawMap();
-		
 	}
 
 	
 	
-	// draw map in $this->image
-	function drawMap()
+	// draw map to $this->image
+	function DrawMap()
 	{
+		// load image resources
+		$this->loadResources();
+	
 		$width = $this->header->MapSizeX * $this->brick_w;
 		$height = $this->header->MapSizeY * $this->brick_h;
 
@@ -292,10 +330,27 @@ class NFKMap
 
 		
 		// fill image with repeated background
-		for ($x = 0; $x < imagesx($this->image) / imagesx($this->res->bg); $x++ )
-			for ($y = 0; $y < imagesy($this->image) / imagesy($this->res->bg); $y++ )
-				imagecopy($this->image, $this->res->bg, $x * imagesx($this->res->bg), $y * imagesy($this->res->bg), 0, 0, imagesx($this->res->bg), imagesy($this->res->bg));
+		if ($this->background)
+			for ($x = 0; $x < imagesx($this->image) / imagesx($this->imres['bg']); $x++ )
+				for ($y = 0; $y < imagesy($this->image) / imagesy($this->imres['bg']); $y++ )
+					imagecopy($this->image, $this->imres['bg'], $x * imagesx($this->imres['bg']), $y * imagesy($this->imres['bg']), 0, 0, imagesx($this->imres['bg']), imagesy($this->imres['bg']));
+
 		
+		// draw location circles
+		if ($this->drawlocations) 
+			foreach ($this->locations as $loc)
+			{
+				if (!$loc->enabled)
+					continue;
+			
+				imagefilledellipse($this->image, 
+					$loc->x * $this->brick_w, // x
+					$loc->y * $this->brick_h, // y
+					500, 500, // radius
+					imagecolorallocatealpha($this->image, 200, 200, 200, 99) );
+				
+				// TODO: draw $loc->text
+			}
 		
 		
 		// draw bricks
@@ -306,7 +361,15 @@ class NFKMap
 				if ($this->bricks[$x][$y] == 0)
 					continue;
 			
-				$brick = $this->getBrickImageByIndex($this->bricks[$x][$y]);
+				if (!$this->drawspecialobjects)
+					if ($this->bricks[$x][$y] >= 34 && $this->bricks[$x][$y] <= 37) // respawns and empty
+						continue;
+			
+				// if brick with this index has better image
+				if ( $this->replacefineimages && $this->replaceBrickFineImage($this->bricks[$x][$y], $x, $y) )
+					continue;
+				
+					$brick = $this->getBrickImageByIndex($this->bricks[$x][$y]);
 				
 				// transparent for water(31) and lava(32)
 				$transparency = ($this->bricks[$x][$y] == 31 || $this->bricks[$x][$y] == 32) ? 75 : 100;
@@ -317,17 +380,8 @@ class NFKMap
 					0, 
 					0,
 					$this->brick_w, $this->brick_h, $transparency);
-					
-				// fill death place with opacity red color
-				if ($this->bricks[$x][$y] == 33)
-					imagefilledrectangle($this->image, 
-							$x * $this->brick_w, 
-							$y * $this->brick_h, 
-							$x * $this->brick_w + $this->brick_w - 1, 
-							$y * $this->brick_h + $this->brick_h, 
-							imagecolorallocatealpha($this->image, 255, 0, 0, 90));
 			}
-		
+
 		
 		// enable antialiasing (smooth teleport lines)
 		#imageantialias($this->image, true);
@@ -342,28 +396,29 @@ class NFKMap
 			{
 				// teleport
 				case 1:
-					imagecopy($this->image, $this->res->portal, 
+					imagecopy($this->image, $this->imres['portal'], 
 						$obj->x * $this->brick_w - $this->brick_w / 2, 
 						$obj->y * $this->brick_h - $this->brick_h * 2, 
 						0, 
 						0, 
-						imagesx($this->res->portal), imagesy($this->res->portal) );
+						imagesx($this->imres['portal']), imagesy($this->imres['portal']) );
 
 					// draw arrow to goto position
-					arrow($this->image, 
-						$obj->x * $this->brick_w + $this->brick_w / 2, // x
-						$obj->y * $this->brick_h, // y
-						$obj->length * $this->brick_w + $this->brick_w / 2, // goto x
-						$obj->dir * $this->brick_h, // goto y
-						5, 1,
-						imagecolorallocatealpha($this->image, 255, 255, 255, 50) );
+					if ($this->drawspecialobjects)
+						arrow($this->image, 
+							$obj->x * $this->brick_w + $this->brick_w / 2, // x
+							$obj->y * $this->brick_h, // y
+							$obj->length * $this->brick_w + $this->brick_w / 2, // goto x
+							$obj->dir * $this->brick_h, // goto y
+							5, 1,
+							imagecolorallocatealpha($this->image, 255, 255, 255, 50) );
 					break;
 					
 				// button
 				case 2:
 					$button_size = 24;
 					
-					imagecopy($this->image, $this->res->button, 
+					imagecopy($this->image, $this->imres['button'], 
 								$obj->x * $this->brick_w + ($this->brick_w - $button_size) / 2,
 								$obj->y * $this->brick_h + ($this->brick_h - $button_size) / 2,
 								$obj->orient * $button_size, // offset for button palette
@@ -372,15 +427,16 @@ class NFKMap
 								$button_size);
 					
 					// draw arrows matched to the doors
-					foreach ($this->objects as $door_obj)
-						if ($door_obj->objtype == 3 && $door_obj->targetname == $obj->target)
-							arrow($this->image, 
-								$obj->x * $this->brick_w + $this->brick_w / 2, // button center x
-								$obj->y * $this->brick_h + $this->brick_h / 2, // button center y
-								$door_obj->x * $this->brick_w + (($door_obj->orient == 1) ? $this->brick_w / 2 : $this->brick_w * $door_obj->length / 2), // door center x
-								$door_obj->y * $this->brick_h + (($door_obj->orient == 0) ? $this->brick_h / 2 : $this->brick_h * $door_obj->length / 2), // door center y
-								5, 1,
-								imagecolorallocatealpha($this->image, 182, 255, 0, 50) );
+					if ($this->drawspecialobjects)
+						foreach ($this->objects as $door_obj)
+							if ($door_obj->objtype == 3 && $door_obj->targetname == $obj->target)
+								arrow($this->image, 
+									$obj->x * $this->brick_w + $this->brick_w / 2, // button center x
+									$obj->y * $this->brick_h + $this->brick_h / 2, // button center y
+									$door_obj->x * $this->brick_w + (($door_obj->orient == 1) ? $this->brick_w / 2 : $this->brick_w * $door_obj->length / 2), // door center x
+									$door_obj->y * $this->brick_h + (($door_obj->orient == 0) ? $this->brick_h / 2 : $this->brick_h * $door_obj->length / 2), // door center y
+									5, 1,
+									imagecolorallocatealpha($this->image, 182, 255, 0, 50) );
 						
 					break;
 					
@@ -388,7 +444,7 @@ class NFKMap
 				case 3:
 					// clone door image to vertical(0) or horizontal(1) depending $ibj->orient
 					for ($i = 0; $i < $obj->length; $i++)
-						imagecopy($this->image, $this->res->door, 
+						imagecopy($this->image, $this->imres['door'], 
 							$obj->x * $this->brick_w + (($obj->orient == 1) ? 0 : $this->brick_w * $i),
 							$obj->y * $this->brick_h + (($obj->orient == 0) ? 0 : $this->brick_h * $i),
 							($obj->orient == 1) ? 0 : $this->brick_w,
@@ -401,46 +457,31 @@ class NFKMap
 				// door trigger
 				case 4:
 					// filled green rectangle
-					imagefilledrectangle($this->image, 
-						$obj->x * $this->brick_w, 
-						$obj->y * $this->brick_h, 
-						$obj->x * $this->brick_w + $obj->length * $this->brick_w, 
-						$obj->y * $this->brick_h + $obj->dir * $this->brick_h, 
-						imagecolorallocatealpha($this->image, 76, 255, 0, 99));
+					if ($this->drawspecialobjects)
+						imagefilledrectangle($this->image, 
+							$obj->x * $this->brick_w, 
+							$obj->y * $this->brick_h, 
+							$obj->x * $this->brick_w + $obj->length * $this->brick_w, 
+							$obj->y * $this->brick_h + $obj->dir * $this->brick_h, 
+							imagecolorallocatealpha($this->image, 76, 255, 0, 99));
 					
 					break;
 			}
 		}
 		
-		/*
-		// draw locations
-		foreach ($this->locations as $loc)
-		{
-			if (!$loc->enabled)
-				continue;
-		
-			imagefilledellipse($this->image, 
-				$loc->x * $this->brick_w, // x
-				$loc->y * $this->brick_h, // y
-				500, 500, // radius
-				imagecolorallocatealpha($this->image, 200, 200, 200, 99) );
-			
-			// TODO: draw $this->text
-		}
-		*/
-		
+		return $this;
 	}
 	
 	// return brick image object by it's index in palette
 	function getBrickImageByIndex($index)
 	{
-		$pal = $this->res->palette;
+		$pal = $this->imres['palette'];
 
 		if ($index >= 54 && $index <= 181)
 		{
-			if ($this->res->custom_palette)
+			if ( isset($this->imres['custom_palette']) )
 			{
-				$pal = $this->res->custom_palette;
+				$pal = $this->imres['custom_palette'];
 				$index -= 54;
 			}
 			else
@@ -475,6 +516,113 @@ class NFKMap
 		#imagepng($brick, "bricks\\$index.png");
 		
 		return $brick;
+	}
+	
+	// draw better image if exists
+	function replaceBrickFineImage($index, $x, $y)
+	{
+		switch($index)
+		{
+			// yellow armor
+			case 17:
+				imagecopy($this->image, $this->imres['armor'], 
+					$x * $this->brick_w, 
+					$y * $this->brick_h, 
+					0, 0, 
+					$this->brick_w, $this->brick_h);
+				break;
+				
+			// red armor
+			case 18:
+				imagecopy($this->image, $this->imres['armor'], 
+					$x * $this->brick_w, 
+					$y * $this->brick_h, 
+					20 * $this->brick_w, 0, 
+					$this->brick_w, $this->brick_h);
+				break;
+				
+			// megahealth
+			case 22:
+				$size = 24;
+				imagecopy($this->image, $this->imres['fine_mega'], 
+					$x * $this->brick_w + ($this->brick_w - $size - 1) / 2, 
+					$y * $this->brick_h - ($size - $this->brick_h - 1), 
+					0, 0, 
+					$size, $size);
+				break;
+				
+			// regeneration
+			case 23:
+				$this->_drawFineItem('fine_regen', $x, $y);
+				break;
+				
+			// battlesuite
+			case 24:
+				$this->_drawFineItem('fine_battle', $x, $y);
+				break;
+				
+			// haste
+			case 25:
+				$this->_drawFineItem('fine_haste', $x, $y);
+				break;
+				
+			// quaddamage
+			case 26:
+				$this->_drawFineItem('fine_quad', $x, $y);
+				break;
+				
+			// flight
+			case 27:
+				$this->_drawFineItem('fine_flight', $x, $y);
+				break;
+				
+			// invisibility
+			case 28:
+				$this->_drawFineItem('fine_invis', $x, $y);
+				break;
+
+			// blue flag
+			case 40:
+				$size_x = 36;
+				$size_y = 41;
+				imagecopy($this->image, $this->imres['flag'], 
+					$x * $this->brick_w + ($this->brick_w - $size_x) / 2, 
+					$y * $this->brick_h - ($size_y - $this->brick_h), 
+					0, 0, 
+					$size_x, $size_y);
+				break;
+				
+			// red flag
+			case 41:
+				$size_x = 36;
+				$size_y = 41;
+				imagecopy($this->image, $this->imres['flag'], 
+					$x * $this->brick_w + ($this->brick_w - $size_x) / 2, 
+					$y * $this->brick_h - ($size_y - $this->brick_h), 
+					$size_x * 14, 0, 
+					$size_x, $size_y);
+				break;
+				
+					
+			// death place fill with opacity red color
+			case 33:
+				imagefilledrectangle($this->image, 
+					$x * $this->brick_w, 
+					$y * $this->brick_h, 
+					$x * $this->brick_w + $this->brick_w - 1, 
+					$y * $this->brick_h + $this->brick_h, 
+					imagecolorallocatealpha($this->image, 255, 0, 0, 99));
+				break;
+							
+			default: 
+				return false;
+		}
+		return true;
+	}
+	function _drawFineItem($res, $x, $y)
+	{
+		imagecopy($this->image, $this->imres[$res], $x * $this->brick_w, 
+					$y * $this->brick_h - $this->brick_h, 0, 0, 37, 32);
 	}
 	
 	
@@ -571,27 +719,13 @@ class NFKMap
 		if ($this->image)
 			imagedestroy($this->image);
 			
-			
-		
-		if ($this->res->palette)
-			imagedestroy($this->res->palette);
-			
-		if ($this->res->custom_palette)
-			imagedestroy($this->res->custom_palette);
-			
-		if ($this->res->bg)
-			imagedestroy($this->res->bg);
-			
-		if ($this->res->portal)
-			imagedestroy($this->res->portal);
-			
-		if ($this->res->door)
-			imagedestroy($this->res->door);
-			
-		if ($this->res->button)
-			imagedestroy($this->res->button);
+		// free resources
+		foreach ($this->imres as $res)
+			@imagedestroy($this->imres);
 	}
 }
+
+
 
 
 
@@ -649,6 +783,8 @@ class Resources
 	public $door; // doors horizontal and vertical
 	public $button; // all colored buttons
 }
+
+
 
 
 
