@@ -3,6 +3,8 @@ NFK Map Viewer
 
 Генерирует изображение карты из .mapa файла игры [Need For Kill](http://needforkill.ru)
 
+Пример работы скрипта: [http://harpywar.com/test/nfkmap/](http://harpywar.com/test/nfkmap/)
+
 
 ### Примеры использования (более подробно в example.php):
 
@@ -15,22 +17,36 @@ NFK Map Viewer
     $nmap->DrawMap();
     $nmap->SaveMapImage();
 
+![](http://habrastorage.org/storage2/9da/b58/0f1/9dab580f1202e3049eec694522530da2.png)
+	
 Можно создать свою карту, или изменить существующую:
 
-    $nmap = new NFKMap("test.mapa");
-	// следующий код заполнит бриками все границы карты
+    // следующий код заполнит бриками границу карты
     for ($x = 0; $x < $nmap->Header->MapSizeX; $x++)
     	for ($y = 0; $y < $nmap->Header->MapSizeY; $y++)
     		if ($x == 0 || $x == $nmap->Header->MapSizeX - 1 || $y == 0 || $y == $nmap->Header->MapSizeY - 1)
     			$nmap->Bricks[$x][$y] = 228;
+    
+    // респавн в левом нижнем углу
+    $nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = 34;
+    
+    // установим в правом нижнем углу портал, с телепортом в левый нижний угол
+    $obj = new TMapObj();
+    $obj->active = 1; // всегда 1
+    $obj->x = $nmap->Header->MapSizeX - 2; // x
+    $obj->y = $nmap->Header->MapSizeY - 2; // y
+    $obj->length = 2; // goto x
+    $obj->dir = $nmap->Header->MapSizeY - 2; // goto y
+    $obj->objtype = 1; // 1 = портал
+    
+    $nmap->Objects[] = $obj; // добавить портал в массив объектов
+    
     $nmap->SaveMap();
-
+	
+![](http://habrastorage.org/storage2/158/372/863/158372863d1b504365c681a8d1db97ee.png)
+	
 <br><br>
-Пример работы скрипта:
-[http://harpywar.com/test/nfkmap/](http://harpywar.com/test/nfkmap/)
 
-
-![](https://raw.github.com/HarpyWar/nfkmap-viewer/master/tourney4.png)
 <br>
 
 
@@ -164,5 +180,23 @@ NFK Map Viewer
 
 P.S. Вышеприведенный код взят из [исходников NFK Radiant](https://bitbucket.org/pqr/nfk-r2/src/37dd3fe7e9f8ec819d68baa9d595f049ff82de57/EDITOR/radiant040/Unit1.pas) (редактор карт)
 
+Извлечь брики и другие изображения можно из файлов basenfk/graph.d и graph2.d, с помощью утилиты [VTDTool.exe](http://needforkill.ru/load/12-1-0-184)
+
+
+BMP картинка палитры
+----------
+В некоторых картах встречается некорректная bmp палитра,. Она открывается через Radiant, но при экспорте картинка она ничем не откроется, либо будет показано смещенное изображение с неправильными цветами.
+
+Изучая [формат BMP](http://www.xbdev.net/image_formats/bmp/index.php) были найдены следующие моменты (на примере карты tourney0):
+
+* По смещению `0x02` неходится размер всего файла картинки в байтах (`0x01D636`)
+* По смещению `0x0A` неходится количество байтов от начала файла до начала самой картинки (`0x0836`), это заголовок (54 байта) + мусор (или спец. данные)
+* По смещению `0x0E` находится размер BitmapInfoHeader. Если он равен 12 байтам, то ничего делать не нужно - это файл формата [BMP v2](http://www.fileformat.info/format/bmp/egff.htm). Там Width и Height картинки имеют тип Short и занимают по 2 байта, а не по 4 (палитра в таком формате есть в карте castle-ctf)
+* По смещению `0x22` находится количество байтов, которое занимает только сама картинка в этом файле (`0x01CE00`)
+
+Фишка в том, что в этой картинке числа по смещению `0x02` и `0x0A` почему-то неверные! Первое должно быть = `0x01D236` (размер файла), а второе `0x01D236 - 0x01CE00 = 0x0436`. А Delphi их игнорирует, поэтому открывает её нормально.
+Чтобы исправить эту картинку, необходимо поменять 8 на 4 по смещению `0X0B`, и она станет нормально открываться. По хорошему, лучше заменить ещё и неправильный размер файла вначале.
+
+![](http://habrastorage.org/storage2/0cf/794/ddf/0cf794ddf4865641be86c9cb09c870f5.png)
 
 

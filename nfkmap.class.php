@@ -95,7 +95,9 @@ class NFKMap
 		if (!$filename)
 			$filename = $this->getFileName();
 			
-		
+		if (!$this->image)
+			throw new Exception('Image is empty. You have to call DrawMap() method before.');
+
 		imagepng($this->image, $filename . ".png");
 		
 		if ($thumbnail)
@@ -109,7 +111,11 @@ class NFKMap
 	// return map image bytes
 	public function ShowImage()
 	{
-		header("Content-Type: image/png");
+		if (!$this->image)
+			throw new Exception('Image is empty. You have to call DrawMap() method before.');
+	
+		header('Content-Type: image/png; filename="' . $this->Header->MapName . '"');
+		
 		imagepng($this->image);
 		#return ob_get_contents(); // return bytes
 	}	
@@ -223,46 +229,13 @@ class NFKMap
 				}
 		}
 		
-		// write date to file
+		// write data to file
 		if (!$filename)
 			$filename = $this->getFileName();
 	
 		file_put_contents($filename . '.mapa', $this->stream);
 	}
-	
-	
-	// preload image resources
-	function loadResources()
-	{
-		$this->imres['palette'] = imagecreatefrompng('data/palette.png');
-		// set palette transparent color
-		$color = imagecolorat($this->imres['palette'], 0, 0); // get first pixel color
-		imagecolortransparent($this->imres['palette'], $color);
-		
-		if ($this->background)
-			if ( !file_exists('data/' . $this->background) )
-				throw new Exception('Background file data/' . $this->background . ' doesn\'t not exist!');
-			else
-				$this->imres['bg'] = imagecreatefromjpeg('data/' . $this->background);
-		
-		$this->imres['portal'] = imagecreatefrompng('data/portal.png');
-		$this->imres['door'] = imagecreatefrompng('data/door.png');
-		$this->imres['button'] = imagecreatefrompng('data/button.png');
-		
-		if ($this->replacefineimages)
-		{
-			$this->imres['armor'] = imagecreatefrompng('data/armor.png');
-			$this->imres['flag'] = imagecreatefrompng('data/flag.png');
-			$this->imres['fine_battle'] = imagecreatefrompng('data/fine_battle.png');
-			$this->imres['fine_fly'] = imagecreatefrompng('data/fine_fly.png');
-			$this->imres['fine_haste'] = imagecreatefrompng('data/fine_haste.png');
-			$this->imres['fine_invis'] = imagecreatefrompng('data/fine_invis.png');
-			$this->imres['fine_mega'] = imagecreatefrompng('data/fine_mega.png');
-			$this->imres['fine_quad'] = imagecreatefrompng('data/fine_quad.png');
-			$this->imres['fine_regen'] = imagecreatefrompng('data/fine_regen.png');
-			$this->imres['fine_regen'] = imagecreatefrompng('data/fine_regen.png');
-		}
-	}
+
 	
 	// 040 map version
 	public function LoadMap()
@@ -420,7 +393,6 @@ class NFKMap
 		return $this;
 	}
 
-	
 	
 	// draw map to $this->image
 	function DrawMap()
@@ -587,6 +559,7 @@ class NFKMap
 		return $this;
 	}
 	
+	
 	// return brick image object by it's index in palette
 	function getBrickImageByIndex($index)
 	{
@@ -741,7 +714,42 @@ class NFKMap
 	}
 	
 	
-
+	
+	
+	// preload image resources
+	function loadResources()
+	{
+		$this->imres['palette'] = imagecreatefrompng('data/palette.png');
+		// set palette transparent color
+		$color = imagecolorat($this->imres['palette'], 0, 0); // get first pixel color
+		imagecolortransparent($this->imres['palette'], $color);
+		
+		if ($this->background)
+			if ( !file_exists('data/' . $this->background) )
+				throw new Exception('Background file data/' . $this->background . ' doesn\'t not exist!');
+			else
+				$this->imres['bg'] = imagecreatefromjpeg('data/' . $this->background);
+		
+		$this->imres['portal'] = imagecreatefrompng('data/portal.png');
+		$this->imres['door'] = imagecreatefrompng('data/door.png');
+		$this->imres['button'] = imagecreatefrompng('data/button.png');
+		
+		if ($this->replacefineimages)
+		{
+			$this->imres['armor'] = imagecreatefrompng('data/armor.png');
+			$this->imres['flag'] = imagecreatefrompng('data/flag.png');
+			$this->imres['fine_battle'] = imagecreatefrompng('data/fine_battle.png');
+			$this->imres['fine_fly'] = imagecreatefrompng('data/fine_fly.png');
+			$this->imres['fine_haste'] = imagecreatefrompng('data/fine_haste.png');
+			$this->imres['fine_invis'] = imagecreatefrompng('data/fine_invis.png');
+			$this->imres['fine_mega'] = imagecreatefrompng('data/fine_mega.png');
+			$this->imres['fine_quad'] = imagecreatefrompng('data/fine_quad.png');
+			$this->imres['fine_regen'] = imagecreatefrompng('data/fine_regen.png');
+			$this->imres['fine_regen'] = imagecreatefrompng('data/fine_regen.png');
+		}
+	}
+	
+	
 
 	function getInt()
 	{
