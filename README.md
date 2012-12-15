@@ -40,7 +40,7 @@ NFK Map Viewer
 Структура карты NFK MAP
 ----------
 
-1. Header карты
+1. **Header карты**
  
  <pre>
  	type THeader = record   

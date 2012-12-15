@@ -17,7 +17,7 @@ try
 	#$nmap->drawlocations = false;	// draw location circles (not good view)
 
 	// fill map layer with bricks and objects
-	#$nmap->LoadMap();
+	$nmap->LoadMap();
 	
 
 	// place own bricks and objects to the map
