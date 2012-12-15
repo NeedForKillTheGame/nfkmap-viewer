@@ -21,6 +21,8 @@ NFK Map Viewer
 	
 Можно создать свою карту, или изменить существующую:
 
+    $nmap = new NFKMap("test.mapa");
+    
     // следующий код заполнит бриками границу карты
     for ($x = 0; $x < $nmap->Header->MapSizeX; $x++)
     	for ($y = 0; $y < $nmap->Header->MapSizeY; $y++)
@@ -46,8 +48,6 @@ NFK Map Viewer
 ![](http://habrastorage.org/storage2/158/372/863/158372863d1b504365c681a8d1db97ee.png)
 	
 <br>
-----------
-
 
 Структура карты NFK MAP
 ----------
@@ -176,7 +176,7 @@ NFK Map Viewer
 
 P.S. Вышеприведенный код взят из [исходников NFK Radiant](https://bitbucket.org/pqr/nfk-r2/src/37dd3fe7e9f8ec819d68baa9d595f049ff82de57/EDITOR/radiant040/Unit1.pas) (редактор карт)
 
-Так же, Radiant поможет в проверке на соответствие всех значений и объектов на карте.
+Так же, Radiant поможет при проверке на соответствие всех значений и объектов на карте.
 
 Извлечь брики и другие изображения можно из файлов игры `/basenfk/system/graph.d` и `graph2.d`, при помощи утилиты [VTDTool.exe](http://needforkill.ru/load/12-1-0-184)
 
