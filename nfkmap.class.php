@@ -7,7 +7,7 @@
 // Webpage: http://harpywar.com
 // Project page: https://github.com/HarpyWar/nfkmap-viewer
 // Version: 15.12.2012
-// Requirements: PHP >=5.3 with enabled extensions: GD, BZip2
+// Requirements: PHP >=5.3 with enabled extensions: php_gd2, php_bz2
 // ----------------------------------------------------------
 class NFKMap
 {
@@ -26,34 +26,37 @@ class NFKMap
 	
 	// draw objects like door triggers, arrows, respawns and empty bricks
 	public $drawspecialobjects = true;	
-	
-	// debug flag will show metadata
-	public $debug = false;
 
 	/* --- SETUP END --- */
 	
 	
 	
-	private $filename;
+	
+	
+	// header (map info)
+	public $Header;
+	// bricks
+	public $Bricks = array();
+	// special objects
+	public $Objects = array();
+	// map locations
+	public $Locations = array();
+	
+	
+	
+	
+	// debug flag will show metadata
+	private $debug = false;
+	
+	private $filename = 'new.mapa';
 	
 	// file handle
 	private $handle; 
 	// current position
 	private $pos = 0;
 
-	// header (map info)
-	public $header = array();
-	// bricks
-	private $bricks = array();
-	// special objects
-	private $objects = array();
-	
-
-	// map locations
-	private $locations = array();
-	
 	// resources
-	private $res;
+	private $imres;
 	
 	// palette transparent color
 	private $transparent_color = false;
@@ -63,6 +66,7 @@ class NFKMap
 	
 	// map origin binary stream
 	private $stream = '';
+	
 	
 	
 	// const
@@ -79,14 +83,8 @@ class NFKMap
 	
 		$this->filename = $filename;
 		
-		if (!$this->handle = @fopen($this->filename, 'r'))
-			throw new Exception("Can't open file " . $filename);
-	
-		$this->loadMap();
-		
-		if ($this->debug)
-			print_r($this);
-		
+		// initial empty map
+		$this->Header = new THeader();
 	}
 
 	// save map image into png file
@@ -101,7 +99,7 @@ class NFKMap
 		
 		if ($thumbnail)
 		{
-			$title = sprintf("%s (%sx%s)", $this->getFileName($thumbnail), $this->header->MapSizeX, $this->header->MapSizeY);
+			$title = sprintf("%s (%sx%s)", $this->getFileName($thumbnail), $this->Header->MapSizeX, $this->Header->MapSizeY);
 			$im = resizeImage($this->image, 350, $title);
 			imagejpeg( $im, $filename . "_thumb.jpg", 75);
 		}
@@ -115,18 +113,122 @@ class NFKMap
 		#return ob_get_contents(); // return bytes
 	}	
 	
-	// save map stream into file
-	public function SaveMap($filename)
-	{
-		file_put_contents($filename, $this->stream);
-	}
-	
 	// return unique md5 hash of the map bytes
 	public function GetHash()
 	{
 		return md5($this->stream);
 	}
 
+	
+	
+	// save map stream into file
+	public function SaveMap($filename = false)
+	{
+		// clear stream
+		$this->stream = '';
+
+		// write header
+			$this->Header->ID = 'NMAP';
+		$this->putString($this->Header->ID);
+			$this->Header->Version = 3;
+		$this->putByte($this->Header->Version);
+		
+			$this->putByte(0x03); // header of string
+		$this->putString($this->Header->MapName . chr(0x00), 70);
+			$this->putByte(0x03); // header of string
+		$this->putString($this->Header->Author . chr(0x00), 70);
+		
+		$this->putByte($this->Header->MapSizeX);
+		$this->putByte($this->Header->MapSizeY);
+		
+		$this->putByte($this->Header->BG);
+		$this->putByte($this->Header->GAMETYPE);
+			$this->Header->numobj = count($this->Objects);
+		$this->putByte($this->Header->numobj);
+
+		$this->putWord($this->Header->numlights);
+		
+		
+		// write bricks
+		for ($y = 0; $y < $this->Header->MapSizeY; $y++)
+			for ($x = 0; $x < $this->Header->MapSizeX; $x++)
+				$this->putByte( isset($this->Bricks[$x][$y]) ? $this->Bricks[$x][$y] : 0 );
+		
+		// write objects
+		foreach($this->Objects as $tmapobj)
+		{
+			$this->putBool($tmapobj->active);
+				$this->putByte(0x03); // byte alignment
+				
+			$this->putWord($tmapobj->x);
+			$this->putWord($tmapobj->y);
+			$this->putWord($tmapobj->length);
+			$this->putWord($tmapobj->dir);
+			$this->putWord($tmapobj->wait);
+			$this->putWord($tmapobj->targetname);
+			$this->putWord($tmapobj->target);
+			$this->putWord($tmapobj->orient);
+			$this->putWord($tmapobj->nowanim);
+			$this->putWord($tmapobj->special);
+			
+			$this->putByte($tmapobj->objtype);
+				$this->putByte(0x03); // byte alignment
+		}
+		
+		// write map palette
+		if ( $this->imres && $this->imres['custom_palette'] )
+		{
+			imagebmp($this->imres['custom_palette']);
+			$pal_bin = imagebmp($this->imres['custom_palette']);
+			$pal_bz = bzcompress($pal_bin);
+			
+			// entry
+			$this->putByte(0x03); // 0x03 header of string
+			$this->putString('pal'); 
+			
+			$this->putInt(strlen($pal_bz), true); // bmp size
+			$this->putByte(0);
+			$this->putWord(0);
+			$this->putInt(0);
+			$this->putInt(0);
+			$this->putInt($this->transparent_color ? hexdec($this->transparent_color) : 0); // transparent color for palette
+			$this->putBool($this->transparent_color ? true : false); // transparent value for palette
+			
+			$this->putString($pal_bz); 
+		}
+
+		// write locations
+		if ($this->Locations && count($this->Locations) > 0)
+		{
+				// entry
+				$this->putByte(0x03); // 0x03 header of string
+				$this->putString('loc'); 
+				
+				$this->putInt(count($this->Locations) * $this->tlocation_size, true); // locations size
+				$this->putByte(0);
+				$this->putWord(0);
+				$this->putInt(0);
+				$this->putInt(0);
+				$this->putInt(0);
+				$this->putBool(false);
+				
+				foreach($this->Locations as $loc)
+				{
+					$this->putBool($loc->enabled);
+					$this->putByte($loc->x);
+					$this->putByte($loc->y);
+						$this->putByte(0x0F); // 0x0F header of string
+					$this->putString($loc->text . chr(0xF4) . chr(0x39), 64);
+				}
+		}
+		
+		// write date to file
+		if (!$filename)
+			$filename = $this->getFileName();
+	
+		file_put_contents($filename . '.mapa', $this->stream);
+	}
+	
 	
 	// preload image resources
 	function loadResources()
@@ -162,46 +264,51 @@ class NFKMap
 	}
 	
 	// 040 map version
-	function loadMap()
+	public function LoadMap()
 	{
-		$this->header = new THeader();
+		if (!$this->handle = @fopen($this->filename, 'r'))
+			throw new Exception("Can't open file " . $this->filename);
+			
+
+			
+		$this->Header = new THeader();
 	
 		// read header
-		$this->header->ID = $this->getString(4);
-		if ($this->header->ID != "NMAP" && $this->header->ID != "NDEM")
-			throw new Exception($filename . " is not NFK map");
+		$this->Header->ID = $this->getString(4);
+		if ($this->Header->ID != "NMAP")
+			throw new Exception($this->filename . " is not NFK map");
 
-		$this->header->Version = $this->getByte();
-		if ($this->header->Version != 3)
+		$this->Header->Version = $this->getByte();
+		if ($this->Header->Version != 3)
 			throw new Exception("Incorrect map version");
 		
 			$this->getByte(); // 0x03 header of string (ignore)
-		$this->header->MapName = $this->cutString( $this->getString(70), 0x00 );
+		$this->Header->MapName = $this->cutString( $this->getString(70), 0x00 );
 			$this->getByte(); // 0x03 header of string (ignore)
-		$this->header->Author = $this->cutString( $this->getString(70), 0x00 );
+		$this->Header->Author = $this->cutString( $this->getString(70), 0x00 );
 		
-		$this->header->MapSizeX = $this->getByte();
-		$this->header->MapSizeY = $this->getByte();
+		$this->Header->MapSizeX = $this->getByte();
+		$this->Header->MapSizeY = $this->getByte();
 		
-		$this->header->BG = $this->getByte();
-		$this->header->GAMETYPE = $this->getByte();
-		$this->header->numobj = $this->getByte();
+		$this->Header->BG = $this->getByte();
+		$this->Header->GAMETYPE = $this->getByte();
+		$this->Header->numobj = $this->getByte();
 
-		$this->header->numlights = $this->getWord();
+		$this->Header->numlights = $this->getWord();
 
 		if ($this->debug)
 			echo "<br>breaks start: " . $this->pos . " "; // 754
 		
 		// read bricks (start at pos 154)
-		for ($y = 0; $y < $this->header->MapSizeY; $y++)
-			for ($x = 0; $x < $this->header->MapSizeX; $x++)
-				$this->bricks[$x][$y] = $this->getByte();
+		for ($y = 0; $y < $this->Header->MapSizeY; $y++)
+			for ($x = 0; $x < $this->Header->MapSizeX; $x++)
+				$this->Bricks[$x][$y] = $this->getByte();
 		
 		if ($this->debug)
 			echo "<br>objects start: " . $this->pos . " "; // 754
 		
 		// read objects
-		for ($i = 0; $i < $this->header->numobj; $i++)
+		for ($i = 0; $i < $this->Header->numobj; $i++)
 		{
 			$tmapobj = new TMapObj();
 			$tmapobj->active = $this->getBool();
@@ -221,15 +328,14 @@ class NFKMap
 			$tmapobj->objtype = $this->getByte();
 				$this->getByte(); // byte alignment (ignore)
 			
-			$this->objects[$i] = $tmapobj;
+			$this->Objects[$i] = $tmapobj;
 		}
 		// sort objects by objtype descending
 		//  it's needed to display button-to-door arrow on front layer,
 		//  cause button objtype=2 and door objtype=3
-		usort($this->objects, function($a, $b) {
+		usort($this->Objects, function($a, $b) {
 			return $a->objtype < $b->objtype;
 		});
-		
 
 
 		// read pal and loc blocks
@@ -243,12 +349,12 @@ class NFKMap
 				$this->getByte(); // 0x03 header of string (ignore)
 			$entry->EntryType = $this->getString(3);
 
-			$entry->DataSize = $this->getInt(true);
+			$entry->DataSize = $this->getInt();
 			$entry->Reserved1 = $this->getByte();
 			$entry->Reserved2 = $this->getWord();
-			$entry->Reserved3 = $this->getInt(true); // FIXME: wrong size?
-			$entry->Reserved4 = $this->getInt(true);
-			$entry->Reserved5 = $this->getInt(true); // transparent color for palette
+			$entry->Reserved3 = $this->getInt();
+			$entry->Reserved4 = $this->getInt();
+			$entry->Reserved5 = $this->getInt(); // transparent color for palette
 			$entry->Reserved6 = $this->getBool(); // transparent value for palette
 			
 			if ($this->debug)
@@ -261,8 +367,8 @@ class NFKMap
 				
 
 				// image binary
-				$pal_gzip = $this->getString($entry->DataSize);
-				$pal_bin = bzdecompress($pal_gzip);
+				$pal_bz = $this->getString($entry->DataSize);
+				$pal_bin = bzdecompress($pal_bz);
 				
 				// create gd object of palette
 				$this->imres['custom_palette'] = imagecreatefrombmpstream($pal_bin);
@@ -301,7 +407,7 @@ class NFKMap
 						$this->getByte(); // 0x0F header of string (ignore)
 					$loc->text = $this->cutString( $this->getString(64), 0xF4 );
 					
-					$this->locations[$i] = $loc;
+					$this->Locations[$i] = $loc;
 				}
 				
 				
@@ -311,6 +417,12 @@ class NFKMap
 			else // end of file
 				break;
 		}
+		
+		
+		if ($this->debug)
+			print_r($this);
+			
+		return $this;
 	}
 
 	
@@ -321,8 +433,8 @@ class NFKMap
 		// load image resources
 		$this->loadResources();
 	
-		$width = $this->header->MapSizeX * $this->brick_w;
-		$height = $this->header->MapSizeY * $this->brick_h;
+		$width = $this->Header->MapSizeX * $this->brick_w;
+		$height = $this->Header->MapSizeY * $this->brick_h;
 
 		
 		// create map layer
@@ -338,7 +450,7 @@ class NFKMap
 		
 		// draw location circles
 		if ($this->drawlocations) 
-			foreach ($this->locations as $loc)
+			foreach ($this->Locations as $loc)
 			{
 				if (!$loc->enabled)
 					continue;
@@ -354,25 +466,25 @@ class NFKMap
 		
 		
 		// draw bricks
-		for ($x = 0; $x < $this->header->MapSizeX; $x++)
-			for ($y = 0; $y < $this->header->MapSizeY; $y++)
+		for ($x = 0; $x < $this->Header->MapSizeX; $x++)
+			for ($y = 0; $y < $this->Header->MapSizeY; $y++)
 			{
 				// pass empty bricks
-				if ($this->bricks[$x][$y] == 0)
+				if (!isset($this->Bricks[$x][$y]) || $this->Bricks[$x][$y] == 0)
 					continue;
 			
 				if (!$this->drawspecialobjects)
-					if ($this->bricks[$x][$y] >= 34 && $this->bricks[$x][$y] <= 37) // respawns and empty
+					if ($this->Bricks[$x][$y] >= 34 && $this->Bricks[$x][$y] <= 37) // respawns and empty
 						continue;
 			
 				// if brick with this index has better image
-				if ( $this->replacefineimages && $this->replaceBrickFineImage($this->bricks[$x][$y], $x, $y) )
+				if ( $this->replacefineimages && $this->replaceBrickFineImage($this->Bricks[$x][$y], $x, $y) )
 					continue;
 				
-					$brick = $this->getBrickImageByIndex($this->bricks[$x][$y]);
+					$brick = $this->getBrickImageByIndex($this->Bricks[$x][$y]);
 				
 				// transparent for water(31) and lava(32)
-				$transparency = ($this->bricks[$x][$y] == 31 || $this->bricks[$x][$y] == 32) ? 75 : 100;
+				$transparency = ($this->Bricks[$x][$y] == 31 || $this->Bricks[$x][$y] == 32) ? 75 : 100;
 				
 				imagecopymerge($this->image, 
 					$brick, $x * $this->brick_w, 
@@ -387,7 +499,7 @@ class NFKMap
 		#imageantialias($this->image, true);
 		
 		// draw special objects
-		foreach ($this->objects as $obj)
+		foreach ($this->Objects as $obj)
 		{
 			if (!$obj->active)
 				continue;
@@ -428,7 +540,7 @@ class NFKMap
 					
 					// draw arrows matched to the doors
 					if ($this->drawspecialobjects)
-						foreach ($this->objects as $door_obj)
+						foreach ($this->Objects as $door_obj)
 							if ($door_obj->objtype == 3 && $door_obj->targetname == $obj->target)
 								arrow($this->image, 
 									$obj->x * $this->brick_w + $this->brick_w / 2, // button center x
@@ -627,11 +739,10 @@ class NFKMap
 	
 	
 
-	// int = 2, longint = 4
-	function getInt($long = false)
+
+	function getInt()
 	{
-		$len = !$long ? 2 : 4;
-		$data = $this->read($len);
+		$data = $this->read(4);
 
 		// convert to int with reading little endian
 		$value = unpack("V*", $data);
@@ -641,14 +752,13 @@ class NFKMap
 		else
 			return 0;
 	}
-	
 	// word = 2, longword = 4
 	function getWord($long = false)
 	{
 		$len = !$long ? 2 : 4;
 		$data = $this->read($len);
 
-		// convert to int with reading little endian
+		// convert to word with reading big endian
 		$value = unpack("S*", $data);
 		
 		if ($value)
@@ -656,6 +766,7 @@ class NFKMap
 		else
 			return 0;
 	}
+	
 	function getString($len)
 	{
 		return $this->read($len);
@@ -673,6 +784,46 @@ class NFKMap
 		return $this->getByte() === 1 ? true : false;
 	}
 	
+	
+	function putInt($value)
+	{
+		// convert to int with writing little endian
+		$value = pack("V*", $value);
+					
+		$this->write($value);
+	}
+	
+	function putWord($value, $long = false)
+	{
+		// convert to word with writing little endian
+		$value = !$long
+					? pack("s*", $value)
+					: pack("S*", $value);
+					
+		$this->write($value);
+	}
+	function putString($value, $fix_len = false)
+	{
+		// fill string to fixed length
+		if ($fix_len)
+			$value = str_pad($value, $fix_len, "phpmapeditor", STR_PAD_RIGHT);
+		
+		$this->write($value);
+	}
+	function putChar($value)
+	{
+		$this->write($value);
+	}
+	function putByte($value)
+	{
+		$this->putChar( chr($value) );
+	}
+	function putBool($value)
+	{
+		$this->putByte($value ? '1' : '0');
+	}
+	
+	
 	// read bytes from current position to specified length
 	function read($length)
 	{
@@ -687,7 +838,16 @@ class NFKMap
 		
 		return $data;
 	}
-
+	
+	// write bytes to stream
+	function write($data)
+	{
+		// add readed bytes to stream
+		$this->stream .= $data;
+		
+		return $data;
+	}
+	
 	
 	// cut string from start to specified byte
 	function cutString($str, $byte = 0x00)
@@ -720,8 +880,9 @@ class NFKMap
 			imagedestroy($this->image);
 			
 		// free resources
-		foreach ($this->imres as $res)
-			@imagedestroy($this->imres);
+		if ($this->imres)
+			foreach ($this->imres as $res)
+				@imagedestroy($this->imres);
 	}
 }
 
@@ -792,80 +953,186 @@ class Resources
 
 // -- BMP SUPPORT --
 
-function imagecreatefrombmp($filename)
-{
-	$file = fopen($filename, "rb");
-	$read = fread($file, 10);
-	while (!feof($file) && ($read <> ""))
-		$read .= fread($file, 1024);
-		
-	return imagecreatefrombmpstream($read);
-}
-
-// http://www.xbdev.net/image_formats/bmp/index.php
-// http://www.fileformat.info/format/bmp/egff.htm
-function imagecreatefrombmpstream($stream) 
-{
-	$temp = unpack("H*", $stream);
-	$hex = $temp[1];
-
-	$header = substr($hex, 0, 54*2);
-	if (substr($header, 0, 4) == "424d") // BM
+class BMP
+{	
+	public static function imagebmp(&$img, $filename = false)
 	{
-		$header_parts = str_split($header, 2);
-		$hsize = hexdec($header_parts[0xF] . $header_parts[0xE]); // header info size
+		$wid = imagesx($img);
+		$hei = imagesy($img);
+		$wid_pad = str_pad('', $wid % 4, "\0");
 		
-		$width = hexdec($header_parts[0x13] . $header_parts[0x12]);
+		$size = 54 + ($wid + $wid_pad) * $hei * 3; //fixed
 		
-		// BMP v2, header info size = 12 bytes
-		if ($hsize == 12)
+		//prepare & save header
+		$header['identifier']		= 'BM';
+		$header['file_size']		= self::dword($size);
+		$header['reserved']			= self::dword(0);
+		$header['bitmap_data']		= self::dword(54);
+		$header['header_size']		= self::dword(40);
+		$header['width']			= self::dword($wid);
+		$header['height']			= self::dword($hei);
+		$header['planes']			= self::word(1);
+		$header['bits_per_pixel']	= self::word(24);
+		$header['compression']		= self::dword(0);
+		$header['data_size']		= self::dword(0);
+		$header['h_resolution']		= self::dword(0);
+		$header['v_resolution']		= self::dword(0);
+		$header['colors']			= self::dword(0);
+		$header['important_colors']	= self::dword(0);
+
+		if ($filename)
 		{
-			$height = hexdec($header_parts[0x15] . $header_parts[0x14]);
-			$bitcount = hexdec($header_parts[0x18]); // bits per pixel 8/16/24/32
-			$offset = hexdec($header_parts[0xB] . $header_parts[0xA]);
+			$f = fopen($filename, "wb");
+			foreach ($header AS $h)
+			{
+				fwrite($f, $h);
+			}
+			
+			//save pixels
+			for ($y=$hei-1; $y>=0; $y--)
+			{
+				for ($x=0; $x<$wid; $x++)
+				{
+					$rgb = imagecolorat($img, $x, $y);
+					fwrite($f, self::byte3($rgb));
+				}
+				fwrite($f, $wid_pad);
+			}
+			fclose($f);
 		}
-		// normal bmp with header size = 54 bytes (+ may be garbage bytes before header and image data)
 		else
 		{
-			$height = hexdec($header_parts[0x17] . $header_parts[0x16]);
-			$bitcount = hexdec($header_parts[0x1C]); // bits per pixel 8/16/24/32
-			$imagesize = hexdec($header_parts[0x25] . $header_parts[0x24] . $header_parts[0x23] . $header_parts[0x22]); // size of image content without header
-			$offset = strlen($stream) - $imagesize;
-		}
-		
-		#debug
-		#echo "<br>hsize:$hsize |w:$width |h:$height |bits:$bitcount |offset:$offset" ;
+			$data = '';
+			foreach ($header AS $h)
+			{
+				$data .= $h;
+			}
+			
+			//save pixels
+			for ($y=$hei-1; $y>=0; $y--)
+			{
+				for ($x=0; $x<$wid; $x++)
+				{
+					$rgb = imagecolorat($img, $x, $y);
+					$data .= self::byte3($rgb);
+				}
+				$data .= $wid_pad;
+			}
+			return $data;
+		}	
+	}
 
-		unset($header_parts);
-	}
-	$x = 0;
-	$y = 1;
-	$img = imagecreatetruecolor($width, $height);
-	$body = substr($hex, $offset * 2); // set offset
-	$body_size = (strlen($body) / 2);
-	$header_size = ($width * $height);
-	$usePadding = ($body_size > ($header_size * $bitcount/8) + 4);
-	for ($i = 0; $i < $body_size; $i+=$bitcount/8)
+	public static function imagecreatefrombmp($filename)
 	{
-		if ($x >= $width) {
-			if ($usePadding)
-				$i += $width % 4;
-			$x = 0;
-			$y++;
-			if ($y > $height)
-				break;
-		}
-		$i_pos = $i * 2;
-		$r = hexdec($body[$i_pos + 4] . $body[$i_pos + 5]);
-		$g = hexdec($body[$i_pos + 2] . $body[$i_pos + 3]);
-		$b = hexdec($body[$i_pos] . $body[$i_pos + 1]);
-		
-		$color = imagecolorallocate($img, $r, $g, $b);
-		imagesetpixel($img, $x, $height - $y, $color);
-		$x++;
+		$file = fopen($filename, "rb");
+		$read = fread($file, 10);
+		while (!feof($file) && ($read <> ""))
+			$read .= fread($file, 1024);
+			
+		return imagecreatefrombmpstream($read);
 	}
-	unset($body);
-	return $img;
+
+	// http://www.xbdev.net/image_formats/bmp/index.php
+	// http://www.fileformat.info/format/bmp/egff.htm
+	public static function imagecreatefrombmpstream($stream) 
+	{
+		$temp = unpack("H*", $stream);
+		$hex = $temp[1];
+
+		$header = substr($hex, 0, 54*2);
+		if (substr($header, 0, 4) == "424d") // BM
+		{
+			$header_parts = str_split($header, 2);
+			$hsize = hexdec($header_parts[0xF] . $header_parts[0xE]); // header info size
+			
+			$width = hexdec($header_parts[0x13] . $header_parts[0x12]);
+			
+			// BMP v2, header info size = 12 bytes
+			if ($hsize == 12)
+			{
+				$height = hexdec($header_parts[0x15] . $header_parts[0x14]);
+				$bitcount = hexdec($header_parts[0x18]); // bits per pixel 8/16/24/32
+				$offset = hexdec($header_parts[0xB] . $header_parts[0xA]);
+			}
+			// normal bmp with header size = 54 bytes (+ may be garbage bytes before header and image data)
+			else
+			{
+				$height = hexdec($header_parts[0x17] . $header_parts[0x16]);
+				$bitcount = hexdec($header_parts[0x1C]); // bits per pixel 8/16/24/32
+				$imagesize = hexdec($header_parts[0x25] . $header_parts[0x24] . $header_parts[0x23] . $header_parts[0x22]); // size of image content without header
+				$offset = strlen($stream) - $imagesize;
+			}
+			
+			#debug
+			#echo "<br>hsize:$hsize |w:$width |h:$height |bits:$bitcount |offset:$offset" ;
+
+			unset($header_parts);
+		}
+		$x = 0;
+		$y = 1;
+		$img = imagecreatetruecolor($width, $height);
+		$body = substr($hex, $offset * 2); // set offset
+		$body_size = (strlen($body) / 2);
+		$header_size = ($width * $height);
+		$usePadding = ($body_size > ($header_size * $bitcount/8) + 4);
+		for ($i = 0; $i < $body_size; $i+=$bitcount/8)
+		{
+			if ($x >= $width) {
+				if ($usePadding)
+					$i += $width % 4;
+				$x = 0;
+				$y++;
+				if ($y > $height)
+					break;
+			}
+			$i_pos = $i * 2;
+			$r = hexdec($body[$i_pos + 4] . $body[$i_pos + 5]);
+			$g = hexdec($body[$i_pos + 2] . $body[$i_pos + 3]);
+			$b = hexdec($body[$i_pos] . $body[$i_pos + 1]);
+			
+			$color = imagecolorallocate($img, $r, $g, $b);
+			imagesetpixel($img, $x, $height - $y, $color);
+			$x++;
+		}
+		unset($body);
+		return $img;
+	}
+
+	private static function byte3($n)
+	{
+		return chr($n & 255) . chr(($n >> 8) & 255) . chr(($n >> 16) & 255);	
+	}
+	
+	private static function undword($n)
+	{
+		$r = unpack("V", $n);
+		return $r[1];
+	}
+	
+	private static function dword($n)
+	{
+		return pack("V", $n);
+	}
+	
+	private static function word($n)
+	{
+		return pack("v", $n);
+	}
+}
+
+
+function imagebmp(&$img, $filename = false)
+{
+	return BMP::imagebmp($img, $filename);
+}
+
+function imagecreatefrombmp($filename)
+{
+	return BMP::imagecreatefrombmp($filename);    
+}	
+function imagecreatefrombmpstream($stream)
+{
+	return BMP::imagecreatefrombmpstream($stream);    
 }
 
 

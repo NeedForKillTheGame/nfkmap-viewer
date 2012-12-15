@@ -1,7 +1,7 @@
 <?php
 require_once("nfkmap.class.php");
 
-// very large maps (250x250) can allocate ~265MB of RAM
+// PHP can allocate ~265MB of RAM for when drawing a very large map (250x250) 
 ini_set('memory_limit', '-1');
 
 $filename = "tourney4.mapa";
@@ -15,9 +15,21 @@ try
 	#$nmap->replacefineimages = true; // replace some item images to better quality (armor, quad, etc.)
 	#$nmap->drawspecialobjects = true; // draw objects like door triggers, arrows, respawns and empty bricks
 	#$nmap->drawlocations = false;	// draw location circles (not good view)
-	#$nmap->debug = false; // debug flag will show a lot of uninteresting information
-	
+
 	// fill map layer with bricks and objects
+	$nmap->LoadMap();
+	
+	
+	// place own bricks and objects to the map
+	/*
+	// next code fill map border with bricks
+	for ($x = 0; $x < $nmap->Header->MapSizeX; $x++)
+		for ($y = 0; $y < $nmap->Header->MapSizeY; $y++)
+			if ($x == 0 || $x == $nmap->Header->MapSizeX - 1 || $y == 0 || $y == $nmap->Header->MapSizeY - 1 || ($x == $y % 5) )
+				$nmap->Bricks[$x][$y] = 228;
+	*/
+	
+	// draw
 	$nmap->DrawMap();
 	
 	// then save it to an image file
@@ -28,8 +40,8 @@ try
 	#$nmap->SaveMapImage( "mapname.png", "thumb title" );
 	
 	// another features
-	#$nmap->SaveMap(); // save original map file
-	#$nmap->SaveMap("mapname.mapa"); // save original map file
+	#$nmap->SaveMap(); // save mapa file
+	#$nmap->SaveMap("mapname.mapa"); // save mapa file with custom filename
 	#echo $nmap-GetHash(); // md5 hash of the map data
 	#var_dump($header); // display map basic information (author, name, size, background, gametype)
 

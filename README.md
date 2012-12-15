@@ -9,9 +9,19 @@ NFK Map Viewer
     require_once("nfkmap.class.php");
 	
     $nmap = new NFKMap("tourney4.mapa");
+	$nmap->LoadMap();
     $nmap->DrawMap();
     $nmap->SaveMapImage();
 
+Можно создать свою карту, или изменить существующую:
+
+    $nmap = new NFKMap("test.mapa");
+	// следующий код заполнит бриками все границы карты
+    for ($x = 0; $x < $nmap->Header->MapSizeX; $x++)
+    	for ($y = 0; $y < $nmap->Header->MapSizeY; $y++)
+    		if ($x == 0 || $x == $nmap->Header->MapSizeX - 1 || $y == 0 || $y == $nmap->Header->MapSizeY - 1)
+    			$nmap->Bricks[$x][$y] = 228;
+    $nmap->SaveMap();
 
 
 Пример работы скрипта:
@@ -89,7 +99,7 @@ NFK Map Viewer
  		DataSize : longint; // 4 байта
  		Reserved1 : byte; // 1 байт
  		Reserved2 : word; // 2 байта
- 		Reserved3 : integer; // 2 байта
+ 		Reserved3 : integer; // 4 байта
  		Reserved4 : longint; // 4 байта
  		Reserved5 : cardinal; // 4 байта
  		Reserved6 : boolean; // 1 байт (значение 0 или 1)
