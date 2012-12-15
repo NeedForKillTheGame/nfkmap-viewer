@@ -4,8 +4,9 @@ NFK Map Viewer
 Генерирует изображение карты из .mapa файла игры [Need For Kill](http://needforkill.ru)
 
 
-### Пример использования (более подробно в example.php):
+### Примеры использования (более подробно в example.php):
 
+Сохранение полноразмерной картинки из существующей карты:
     require_once("nfkmap.class.php");
 	
     $nmap = new NFKMap("tourney4.mapa");
@@ -23,7 +24,7 @@ NFK Map Viewer
     			$nmap->Bricks[$x][$y] = 228;
     $nmap->SaveMap();
 
-
+<br><br>
 Пример работы скрипта:
 [http://harpywar.com/test/nfkmap/](http://harpywar.com/test/nfkmap/)
 

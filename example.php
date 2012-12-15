@@ -17,19 +17,32 @@ try
 	#$nmap->drawlocations = false;	// draw location circles (not good view)
 
 	// fill map layer with bricks and objects
-	$nmap->LoadMap();
+	#$nmap->LoadMap();
 	
-	
+
 	// place own bricks and objects to the map
 	/*
-	// next code fill map border with bricks
 	for ($x = 0; $x < $nmap->Header->MapSizeX; $x++)
 		for ($y = 0; $y < $nmap->Header->MapSizeY; $y++)
-			if ($x == 0 || $x == $nmap->Header->MapSizeX - 1 || $y == 0 || $y == $nmap->Header->MapSizeY - 1 || ($x == $y % 5) )
+			if ($x == 0 || $x == $nmap->Header->MapSizeX - 1 || $y == 0 || $y == $nmap->Header->MapSizeY - 1)
 				$nmap->Bricks[$x][$y] = 228;
+	
+	// create respawn on the left corner
+	$nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = 34;
+	
+	// create teleport on the right corner, it will teleport player to the left corner
+	$obj = new TMapObj();
+	$obj->active = 1;
+	$obj->x = $nmap->Header->MapSizeX - 2; // x
+	$obj->y = $nmap->Header->MapSizeY - 2; // y
+	$obj->length = 2; // goto x
+	$obj->dir = $nmap->Header->MapSizeY - 2; // goto y
+	$obj->objtype = 1; // 1 = teleport
+	
+	$nmap->Objects[] = $obj; // add teleport object to list
 	*/
 	
-	// draw
+	// draw map in memory
 	$nmap->DrawMap();
 	
 	// then save it to an image file

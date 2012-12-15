@@ -88,8 +88,9 @@ class NFKMap
 	}
 
 	// save map image into png file
-	// $thumbnail - map title
-	public function SaveMapImage($filename = false, $thumbnail = false)
+	// $thumbnail - map title (if exist then create thumbnail file)
+	// $thumb_size - max size of thumbnail
+	public function SaveMapImage($filename = false, $thumbnail = false, $thumb_size = 350)
 	{
 		if (!$filename)
 			$filename = $this->getFileName();
@@ -100,7 +101,7 @@ class NFKMap
 		if ($thumbnail)
 		{
 			$title = sprintf("%s (%sx%s)", $this->getFileName($thumbnail), $this->Header->MapSizeX, $this->Header->MapSizeY);
-			$im = resizeImage($this->image, 350, $title);
+			$im = resizeImage($this->image, $thumb_size, $title);
 			imagejpeg( $im, $filename . "_thumb.jpg", 75);
 		}
 	}
@@ -176,7 +177,7 @@ class NFKMap
 		}
 		
 		// write map palette
-		if ( $this->imres && $this->imres['custom_palette'] )
+		if ( $this->imres && isset($this->imres['custom_palette']) )
 		{
 			imagebmp($this->imres['custom_palette']);
 			$pal_bin = imagebmp($this->imres['custom_palette']);
@@ -330,14 +331,8 @@ class NFKMap
 			
 			$this->Objects[$i] = $tmapobj;
 		}
-		// sort objects by objtype descending
-		//  it's needed to display button-to-door arrow on front layer,
-		//  cause button objtype=2 and door objtype=3
-		usort($this->Objects, function($a, $b) {
-			return $a->objtype < $b->objtype;
-		});
 
-
+		
 		// read pal and loc blocks
 		while ( !feof($this->handle) )
 		{
@@ -436,7 +431,7 @@ class NFKMap
 		$width = $this->Header->MapSizeX * $this->brick_w;
 		$height = $this->Header->MapSizeY * $this->brick_h;
 
-		
+
 		// create map layer
 		$this->image = imagecreatetruecolor($width, $height);
 
@@ -497,6 +492,14 @@ class NFKMap
 		
 		// enable antialiasing (smooth teleport lines)
 		#imageantialias($this->image, true);
+		
+		
+		// sort objects by objtype descending
+		//  it's needed to display button-to-door arrow on front layer,
+		//  cause button objtype=2 and door objtype=3
+		usort($this->Objects, function($a, $b) {
+			return $a->objtype < $b->objtype;
+		});
 		
 		// draw special objects
 		foreach ($this->Objects as $obj)
@@ -907,31 +910,31 @@ class THeader
 // special object
 class TMapObj
 {
-	public $active; // boolean
-	public $x, $y, $length, $dir, $wait; // word
-	public $targetname, $target, $orient, $nowanim, $special; // word
-	public $objtype; // byte
+	public $active = 0; // boolean
+	public $x = 0, $y = 0, $length = 0, $dir = 0, $wait = 0; // word
+	public $targetname = 0, $target = 0, $orient = 0, $nowanim = 0, $special = 0; // word
+	public $objtype = 0; // byte
 }
 
 // palette
 class TMapEntry
 {
 	public $EntryType; // byte header + string[3]
-	public $DataSize; // longint
-	public $Reserved1; // byte
-	public $Reserved2; // word
-	public $Reserved3; // integer
-	public $Reserved4; // longint
-	public $Reserved5; // cardinal
-	public $Reserved6; // boolean
+	public $DataSize = 0; // longint
+	public $Reserved1 = 0; // byte
+	public $Reserved2 = 0; // word
+	public $Reserved3 = 0; // integer
+	public $Reserved4 = 0; // longint
+	public $Reserved5 = 0; // cardinal
+	public $Reserved6 = false; // boolean
 }
 
 // location
 class TLocationText
 {
-	public $enabled; // boolean
-	public $x, $y; // byte
-	public $text; // string[64]
+	public $enabled = 0; // boolean
+	public $x = 0, $y = 0; // byte
+	public $text = ''; // string[64]
 }
 
 // image resources
