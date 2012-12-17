@@ -27,6 +27,11 @@ class NFKMap
 	// draw objects like door triggers, arrows, respawns and empty bricks
 	public $drawspecialobjects = true;	
 
+	
+	// debug flag will display a lot of boring info
+	public $debug = false;
+	
+	
 	/* --- SETUP END --- */
 	
 	
@@ -41,12 +46,7 @@ class NFKMap
 	public $Objects = array();
 	// map locations
 	public $Locations = array();
-	
-	
-	
-	
-	// debug flag will show metadata
-	private $debug = true;
+
 	
 	private $filename = 'new.mapa';
 	
@@ -78,9 +78,6 @@ class NFKMap
 	// load and parse map stream
 	public function __construct($filename)
 	{
-		if ($this->debug)
-			echo "<pre>";
-	
 		$this->filename = $filename;
 		
 		// initial empty map
@@ -140,10 +137,10 @@ class NFKMap
 			$this->Header->Version = 3;
 		$this->putByte($this->Header->Version);
 		
-			$this->putByte(0x03); // header of string
-		$this->putString($this->Header->MapName . chr(0x00), 70);
-			$this->putByte(0x03); // header of string
-		$this->putString($this->Header->Author . chr(0x00), 70);
+		$this->putByte( strlen($this->Header->MapName) ); // size of next readable string
+		$this->putString($this->Header->MapName, 70);
+		$this->putByte( strlen($this->Header->Author) ); // size of next readable string
+		$this->putString($this->Header->Author, 70);
 		
 		$this->putByte($this->Header->MapSizeX);
 		$this->putByte($this->Header->MapSizeY);
@@ -256,10 +253,11 @@ class NFKMap
 		if ($this->Header->Version != 3)
 			throw new Exception("Incorrect map version");
 		
-			$this->getByte(); // 0x03 header of string (ignore)
-		$this->Header->MapName = $this->cutString( $this->getString(70), 0x00 );
-			$this->getByte(); // 0x03 header of string (ignore)
-		$this->Header->Author = $this->cutString( $this->getString(70), 0x00 );
+		
+		$b = $this->getByte(); // size of next readable string
+		$this->Header->MapName = substr($this->getString(70), 0, $b);
+		$b = $this->getByte(); // size of next readable string
+		$this->Header->Author = substr($this->getString(70), 0, $b);
 		
 		$this->Header->MapSizeX = $this->getByte();
 		$this->Header->MapSizeY = $this->getByte();
@@ -857,18 +855,6 @@ class NFKMap
 		$this->stream .= $data;
 		
 		return $data;
-	}
-	
-	
-	// cut string from start to specified byte
-	function cutString($str, $byte = 0x00)
-	{
-		for ($i = 0; $i < strlen($str); $i++)
-		{
-			if ( ord($str[$i]) == $byte )
-				return substr($str, 0, $i);
-		}
-		return $str;
 	}
 		
 	// return map name from file name (without extension)
