@@ -93,7 +93,7 @@ class NFKMap
 			$filename = $this->getFileName();
 			
 		if (!$this->image)
-			throw new Exception('Image is empty. You have to call DrawMap() method before.');
+			$this->DrawMap();
 
 		imagepng($this->image, $filename . ".png");
 		
@@ -109,7 +109,7 @@ class NFKMap
 	public function ShowImage()
 	{
 		if (!$this->image)
-			throw new Exception('Image is empty. You have to call DrawMap() method before.');
+			$this->DrawMap();
 	
 		header('Content-Type: image/png; filename="' . $this->Header->MapName . '"');
 		
@@ -393,7 +393,7 @@ class NFKMap
 
 	
 	// draw map to $this->image
-	function DrawMap()
+	public function DrawMap()
 	{
 		// load image resources
 		$this->loadResources();
@@ -559,7 +559,7 @@ class NFKMap
 	
 	
 	// return brick image object by it's index in palette
-	function getBrickImageByIndex($index)
+	private function getBrickImageByIndex($index)
 	{
 		$pal = $this->imres['palette'];
 
@@ -605,7 +605,7 @@ class NFKMap
 	}
 	
 	// draw better image if exists
-	function replaceBrickFineImage($index, $x, $y)
+	private function replaceBrickFineImage($index, $x, $y)
 	{
 		switch($index)
 		{
@@ -705,7 +705,7 @@ class NFKMap
 		}
 		return true;
 	}
-	function _drawFineItem($res, $x, $y)
+	private function _drawFineItem($res, $x, $y)
 	{
 		imagecopy($this->image, $this->imres[$res], $x * $this->brick_w, 
 					$y * $this->brick_h - $this->brick_h, 0, 0, 37, 32);
@@ -715,7 +715,7 @@ class NFKMap
 	
 	
 	// preload image resources
-	function loadResources()
+	private function loadResources()
 	{
 		$this->imres['palette'] = imagecreatefrompng('data/palette.png');
 		// set palette transparent color
@@ -749,7 +749,7 @@ class NFKMap
 	
 	
 
-	function getInt()
+	private function getInt()
 	{
 		$data = $this->read(4);
 
@@ -762,7 +762,7 @@ class NFKMap
 			return 0;
 	}
 	// word = 2, longword = 4
-	function getWord($long = false)
+	private function getWord($long = false)
 	{
 		$len = !$long ? 2 : 4;
 		$data = $this->read($len);
@@ -776,25 +776,25 @@ class NFKMap
 			return 0;
 	}
 	
-	function getString($len)
+	private function getString($len)
 	{
 		return $this->read($len);
 	}
-	function getChar()
+	private function getChar()
 	{
 		return $this->read(1);
 	}
-	function getByte()
+	private function getByte()
 	{
 		return ord( $this->getChar() );
 	}
-	function getBool()
+	private function getBool()
 	{
 		return $this->getByte() === 1 ? true : false;
 	}
 	
 	
-	function putInt($value)
+	private function putInt($value)
 	{
 		// convert to int with writing little endian
 		$value = pack("V*", $value);
@@ -802,7 +802,7 @@ class NFKMap
 		$this->write($value);
 	}
 	
-	function putWord($value, $long = false)
+	private function putWord($value, $long = false)
 	{
 		// convert to word with writing little endian
 		$value = !$long
@@ -811,7 +811,7 @@ class NFKMap
 					
 		$this->write($value);
 	}
-	function putString($value, $fix_len = false)
+	private function putString($value, $fix_len = false)
 	{
 		// fill string to fixed length
 		if ($fix_len)
@@ -819,22 +819,22 @@ class NFKMap
 		
 		$this->write($value);
 	}
-	function putChar($value)
+	private function putChar($value)
 	{
 		$this->write($value);
 	}
-	function putByte($value)
+	private function putByte($value)
 	{
 		$this->putChar( chr($value) );
 	}
-	function putBool($value)
+	private function putBool($value)
 	{
 		$this->putByte($value ? '1' : '0');
 	}
 	
 	
 	// read bytes from current position to specified length
-	function read($length)
+	private function read($length)
 	{
 		fseek($this->handle, $this->pos);
 		$data = fread($this->handle, $length);
@@ -849,7 +849,7 @@ class NFKMap
 	}
 	
 	// write bytes to stream
-	function write($data)
+	private function write($data)
 	{
 		// add readed bytes to stream
 		$this->stream .= $data;
@@ -858,7 +858,7 @@ class NFKMap
 	}
 		
 	// return map name from file name (without extension)
-	function getFileName($filename = false)
+	private function getFileName($filename = false)
 	{
 		if (!$filename)
 			$filename = basename($this->filename);
@@ -867,7 +867,7 @@ class NFKMap
 	}
 	
 
-	function __destruct()
+	public function __destruct()
 	{
 		// free resources
 		if ($this->handle)
