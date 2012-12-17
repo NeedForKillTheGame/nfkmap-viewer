@@ -46,7 +46,7 @@ class NFKMap
 	
 	
 	// debug flag will show metadata
-	private $debug = false;
+	private $debug = true;
 	
 	private $filename = 'new.mapa';
 	
@@ -224,8 +224,8 @@ class NFKMap
 					$this->putBool($loc->enabled);
 					$this->putByte($loc->x);
 					$this->putByte($loc->y);
-						$this->putByte(0x0F); // 0x0F header of string
-					$this->putString($loc->text . chr(0xF4) . chr(0x39), 64);
+					$this->putByte( strlen($loc->text) ); // size of next readable string
+					$this->putString($loc->text, 64);
 				}
 		}
 		
@@ -372,8 +372,8 @@ class NFKMap
 					$loc->enabled = $this->getBool();
 					$loc->x = $this->getByte();
 					$loc->y = $this->getByte();
-						$this->getByte(); // 0x0F header of string (ignore)
-					$loc->text = $this->cutString( $this->getString(64), 0xF4 );
+					$b = $this->getByte(); // size of next readable string
+					$loc->text = substr($this->getString(64), 0, $b);
 					
 					$this->Locations[$i] = $loc;
 				}
@@ -520,8 +520,8 @@ class NFKMap
 								arrow($this->image, 
 									$obj->x * $this->brick_w + $this->brick_w / 2, // button center x
 									$obj->y * $this->brick_h + $this->brick_h / 2, // button center y
-									$door_obj->x * $this->brick_w + (($door_obj->orient == 1) ? $this->brick_w / 2 : $this->brick_w * $door_obj->length / 2), // door center x
-									$door_obj->y * $this->brick_h + (($door_obj->orient == 0) ? $this->brick_h / 2 : $this->brick_h * $door_obj->length / 2), // door center y
+									$door_obj->x * $this->brick_w + (($door_obj->orient == 1 || $obj->orient == 3) ? $this->brick_w / 2 : $this->brick_w * $door_obj->length / 2), // door center x
+									$door_obj->y * $this->brick_h + (($door_obj->orient == 0 || $obj->orient == 2) ? $this->brick_h / 2 : $this->brick_h * $door_obj->length / 2), // door center y
 									5, 1,
 									imagecolorallocatealpha($this->image, 182, 255, 0, 50) );
 						
@@ -532,9 +532,9 @@ class NFKMap
 					// clone door image to vertical(0) or horizontal(1) depending $ibj->orient
 					for ($i = 0; $i < $obj->length; $i++)
 						imagecopy($this->image, $this->imres['door'], 
-							$obj->x * $this->brick_w + (($obj->orient == 1) ? 0 : $this->brick_w * $i),
-							$obj->y * $this->brick_h + (($obj->orient == 0) ? 0 : $this->brick_h * $i),
-							($obj->orient == 1) ? 0 : $this->brick_w,
+							$obj->x * $this->brick_w + (($obj->orient == 1 || $obj->orient == 3) ? 0 : $this->brick_w * $i),
+							$obj->y * $this->brick_h + (($obj->orient == 0 || $obj->orient == 2) ? 0 : $this->brick_h * $i),
+							($obj->orient == 1 || $obj->orient == 3) ? 0 : $this->brick_w,
 							0,
 							$this->brick_w,
 							$this->brick_h);
@@ -592,8 +592,8 @@ class NFKMap
 		// get transparent color of palette
 		$color = imagecolortransparent($pal);
 		
-		if ($this->debug)
-			echo '<br>color: ' . $color;
+		#if ($this->debug)
+		#	echo '<br>color: ' . $color;
 
 		
 		// set brick transparent color
@@ -1159,9 +1159,13 @@ function hexcoloralloc($im, $hex)
 } 
 
 // draw arrow
-function arrow($im, $x1, $y1, $x2, $y2, $alength, $awidth, $color) {
+function arrow($im, $x1, $y1, $x2, $y2, $alength, $awidth, $color)
+{
     $distance = sqrt(pow($x1 - $x2, 2) + pow($y1 - $y2, 2));
 
+	if ($distance == 0)
+		return;
+	
     $dx = $x2 + ($x1 - $x2) * $alength / $distance;
     $dy = $y2 + ($y1 - $y2) * $alength / $distance;
 
