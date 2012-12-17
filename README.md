@@ -48,9 +48,9 @@ NFK Map Viewer
 ![](http://habrastorage.org/storage2/158/372/863/158372863d1b504365c681a8d1db97ee.png)
 	
 <br>
-* [Специальные объекты на карте](wiki/Специальные-объекты-на-карте)
+* [Специальные объекты на карте](https://github.com/HarpyWar/nfkmap-viewer/wiki/Специальные-объекты-на-карте)
 
-* [Структура карты NFK MAP](wiki/Структура карты NFK MAP)
-* [BMP картинка палитры](wiki/BMP-картинка-палитры)
+* [Структура карты NFK MAP](https://github.com/HarpyWar/nfkmap-viewer/wiki/Структура карты NFK MAP)
+* [BMP картинка палитры](https://github.com/HarpyWar/nfkmap-viewer/wiki/BMP-картинка-палитры)
 
 
