@@ -125,11 +125,9 @@ class NFKMap
 	}
 
 	
-	
-	// save map stream into file
+	// save map bytes to a mapa file
 	public function SaveMap($filename = false)
 	{
-		// clear stream
 		$this->stream = '';
 
 		// write header
@@ -227,31 +225,52 @@ class NFKMap
 				}
 		}
 		
-		// write data to file
 		if (!$filename)
 			$filename = $this->getFileName();
 	
+		// write generated data to a file
 		file_put_contents($filename . '.mapa', $this->stream);
 	}
 
 	
-	// 040 map version
+	// open and parse map file (or demo file)
 	public function LoadMap()
 	{
 		if (!$this->handle = @fopen($this->filename, 'r'))
 			throw new Exception("Can't open file " . $this->filename);
-			
 
+		// if file is a demo
+		if ( $this->getString(7) == "NFKDEMO")
+		{
+			$this->getByte(); // unknown byte 0x2D (ignore)
 			
-		$this->Header = new THeader();
-	
+			// read bz compressed data
+			$data_bz = '';
+			while (!feof($this->handle))
+				$data_bz .= fread($this->handle, 8192);
+			fclose($this->handle);
+			
+			// decompress data
+			$data_bin = bzdecompress($data_bz);
+			
+			// create inmemory stream and write data
+			$this->handle = fopen("php://memory", 'r+');
+			fputs($this->handle, $data_bin);
+
+			// set position to start
+			rewind($this->handle);
+			$this->pos = 0;
+		}
+		
 		// read header
+		$this->Header = new THeader();
+		
 		$this->Header->ID = $this->getString(4);
-		if ($this->Header->ID != "NMAP")
-			throw new Exception($this->filename . " is not NFK map");
+		if ($this->Header->ID != "NMAP" && $this->Header->ID != "NDEM")
+			throw new Exception($this->filename . " is not NFK map/demo");
 
 		$this->Header->Version = $this->getByte();
-		if ($this->Header->Version != 3)
+		if ($this->Header->Version < 3 || $this->Header->Version > 7)
 			throw new Exception("Incorrect map version");
 		
 		
@@ -303,7 +322,6 @@ class NFKMap
 			
 			$this->Objects[$i] = $tmapobj;
 		}
-
 		
 		// read pal and loc blocks
 		while ( !feof($this->handle) )
@@ -335,7 +353,11 @@ class NFKMap
 
 				// image binary
 				$pal_bz = $this->getString($entry->DataSize);
-				$pal_bin = bzdecompress($pal_bz);
+				
+				// decompress if map and nothing to do if demo file
+				$pal_bin = ( $this->Header->ID == "NDEM" )
+								? $pal_bz
+								: bzdecompress($pal_bz);
 				
 				// create gd object of palette
 				$this->imres['custom_palette'] = imagecreatefrombmpstream($pal_bin);
@@ -376,15 +398,19 @@ class NFKMap
 					
 					$this->Locations[$i] = $loc;
 				}
-				
-				
-				if ($this->debug)
-					echo "<br>loc end (file end): " . $this->pos;
 			}
 			else // end of file
+			{
+				if ($this->debug)
+					echo "<br>end of file: " . strlen($this->stream) . '|' . $this->pos;
+					
+				// remove TMapEntry length from the stream if file bigger than it should
+				if ( strlen($this->stream) == $this->pos )
+					$stream = substr($this->stream, 0, strlen($this->stream) - 24);
+				
 				break;
+			}
 		}
-		
 		
 		if ($this->debug)
 			print_r($this);
@@ -1061,7 +1087,8 @@ class BMP
 			
 			#debug
 			#echo "<br>hsize:$hsize |w:$width |h:$height |bits:$bitcount |offset:$offset" ;
-
+			#die();
+			
 			unset($header_parts);
 		}
 		$x = 0;
@@ -1082,10 +1109,11 @@ class BMP
 					break;
 			}
 			$i_pos = $i * 2;
-			$r = hexdec($body[$i_pos + 4] . $body[$i_pos + 5]);
-			$g = hexdec($body[$i_pos + 2] . $body[$i_pos + 3]);
-			$b = hexdec($body[$i_pos] . $body[$i_pos + 1]);
 			
+			$r = @hexdec($body[$i_pos + 4] . $body[$i_pos + 5]);
+			$g = @hexdec($body[$i_pos + 2] . $body[$i_pos + 3]);
+			$b = @hexdec($body[$i_pos] . $body[$i_pos + 1]);
+
 			$color = imagecolorallocate($img, $r, $g, $b);
 			imagesetpixel($img, $x, $height - $y, $color);
 			$x++;

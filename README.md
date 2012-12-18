@@ -1,7 +1,7 @@
 NFK Map Viewer
 ==============
 
-Генерирует изображение карты из .mapa файла игры [Need For Kill](http://needforkill.ru)
+Генерирует изображение карты из .mapa/.ndm файлов игры [Need For Kill](http://needforkill.ru)
 
 Пример работы скрипта: [http://harpywar.com/test/nfkmap/](http://harpywar.com/test/nfkmap/)
 
@@ -46,6 +46,18 @@ NFK Map Viewer
     $nmap->SaveMap();
 	
 ![](http://habrastorage.org/storage2/158/372/863/158372863d1b504365c681a8d1db97ee.png)
+
+Можно извлечь и сохранить карту .mapa из демки:
+
+    $nmap = new NFKMap("demo.ndm");
+    $nmap->LoadMap();
+    
+    // удалить из названия карты неразрешенные в имени файла символы
+    $bad = array_merge( array_map('chr', range(0,31)), array("<", ">", ":", '"', "/", "\\", "|", "?", "*"));
+    $filename = str_replace($bad, '', $this->Header->MapName);
+    
+    $nmap->SaveMap($filename);
+
 
 <br>
 ### Разбор формата карты
