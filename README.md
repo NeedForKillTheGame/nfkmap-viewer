@@ -46,8 +46,10 @@ NFK Map Viewer
     $nmap->SaveMap();
 	
 ![](http://habrastorage.org/storage2/158/372/863/158372863d1b504365c681a8d1db97ee.png)
-	
+
 <br>
+### Разбор формата карты
+
 * [Специальные объекты на карте](https://github.com/HarpyWar/nfkmap-viewer/wiki/Специальные-объекты-на-карте)
 
 * [Структура карты NFK MAP](https://github.com/HarpyWar/nfkmap-viewer/wiki/Структура карты NFK MAP)

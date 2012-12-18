@@ -10,8 +10,8 @@ try
 {
 	$nmap = new NFKMap($filename);
 	
-	$nmap->background = 'bg_8.jpg'; // setup background (if not set then color is black)
-	#$nmap->replacefineimages = true; // replace some item images to better quality (armor, quad, etc.)
+	#$nmap->background = 2; // setup background index (from 1 to 8); if not set then use background index from the map header
+	#$nmap->background = false; // background is black	#$nmap->replacefineimages = true; // replace some item images to better quality (armor, quad, etc.)
 	#$nmap->drawspecialobjects = true; // draw objects: door triggers, arrows, respawns and empty bricks
 	#$nmap->drawlocations = false;	// draw location circles (view is not good)
 

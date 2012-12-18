@@ -14,9 +14,10 @@ class NFKMap
 	/* --- SETUP START --- */
 	
 	// fill map background with repeated image
-	//  value is a number of the file "data/bg_[number].jpg"
-	//  if value == 0, then fill background with black color
-	public $background = false;
+	//  value is an index of the image file "data/bg_[index].jpg"
+	//  if value === false, then fill background with black color
+	//  if value === null then use background index from the MAP Header->BG
+	public $background = null;
 	
 	// replace some item images to better quality (armor, quad, etc.)
 	public $replacefineimages = true;
@@ -407,7 +408,7 @@ class NFKMap
 
 		
 		// fill image with repeated background
-		if ($this->background)
+		if ( isset($this->imres['bg']) )
 			for ($x = 0; $x < imagesx($this->image) / imagesx($this->imres['bg']); $x++ )
 				for ($y = 0; $y < imagesy($this->image) / imagesy($this->imres['bg']); $y++ )
 					imagecopy($this->image, $this->imres['bg'], $x * imagesx($this->imres['bg']), $y * imagesy($this->imres['bg']), 0, 0, imagesx($this->imres['bg']), imagesy($this->imres['bg']));
@@ -722,12 +723,16 @@ class NFKMap
 		$color = imagecolorat($this->imres['palette'], 0, 0); // get first pixel color
 		imagecolortransparent($this->imres['palette'], $color);
 		
-		if ($this->background)
-			if ( !file_exists('data/' . $this->background) )
-				throw new Exception('Background file data/' . $this->background . ' doesn\'t not exist!');
-			else
-				$this->imres['bg'] = imagecreatefromjpeg('data/' . $this->background);
 		
+		if ($this->background !== false)
+		{
+			// if background index was not set then use MAP background
+			$bg_filename = 'data/bg_' . (($this->background !== null) ? $this->background : $this->Header->BG) . '.jpg';
+
+			if ( file_exists( $bg_filename ) )
+				$this->imres['bg'] = imagecreatefromjpeg($bg_filename);
+		}
+	
 		$this->imres['portal'] = imagecreatefrompng('data/portal.png');
 		$this->imres['door'] = imagecreatefrompng('data/door.png');
 		$this->imres['button'] = imagecreatefrompng('data/button.png');
@@ -1187,9 +1192,9 @@ function resizeImage($src, $max_size = 200, $text=false)
 		
 		imagefilledrectangle($im, 0, $tn_height-20, $tn_width, $tn_height, $bar_color);
 		
-		$txt_color=$background = imagecolorallocate($im, 255, 255, 255);
-		$txt_file="data/arial.ttf";
-		$txt_fontsize=10.5;
+		$txt_color = imagecolorallocate($im, 255, 255, 255);
+		$txt_file = "data/arial.ttf";
+		$txt_fontsize = 10.5;
 
 		imagettftext ($im, $txt_fontsize, 0,  10, $tn_height-6, $txt_color, $txt_file, $text);
 	}
