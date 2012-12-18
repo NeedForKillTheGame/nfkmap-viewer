@@ -612,7 +612,7 @@ class NFKMap
 		{
 			// yellow armor
 			case 17:
-				imagecopy($this->image, $this->imres['armor'], 
+				imagecopy($this->image, $this->imres['fine_armor'], 
 					$x * $this->brick_w, 
 					$y * $this->brick_h, 
 					0, 0, 
@@ -621,10 +621,10 @@ class NFKMap
 				
 			// red armor
 			case 18:
-				imagecopy($this->image, $this->imres['armor'], 
+				imagecopy($this->image, $this->imres['fine_armor'], 
 					$x * $this->brick_w, 
 					$y * $this->brick_h, 
-					20 * $this->brick_w, 0, 
+					$this->brick_w, 0, 
 					$this->brick_w, $this->brick_h);
 				break;
 				
@@ -640,39 +640,39 @@ class NFKMap
 				
 			// regeneration
 			case 23:
-				$this->_drawFineItem('fine_regen', $x, $y);
+				$this->_drawFineItem('fine_power', $x, $y, 2);
 				break;
 				
 			// battlesuite
 			case 24:
-				$this->_drawFineItem('fine_battle', $x, $y);
+				$this->_drawFineItem('fine_power', $x, $y, 3);
 				break;
 				
 			// haste
 			case 25:
-				$this->_drawFineItem('fine_haste', $x, $y);
+				$this->_drawFineItem('fine_power', $x, $y, 0);
 				break;
 				
 			// quaddamage
 			case 26:
-				$this->_drawFineItem('fine_quad', $x, $y);
+				$this->_drawFineItem('fine_power', $x, $y, 4);
 				break;
 				
 			// flight
 			case 27:
-				$this->_drawFineItem('fine_flight', $x, $y);
+				$this->_drawFineItem('fine_power', $x, $y, 5);
 				break;
 				
 			// invisibility
 			case 28:
-				$this->_drawFineItem('fine_invis', $x, $y);
+				$this->_drawFineItem('fine_power', $x, $y, 1);
 				break;
 
 			// blue flag
 			case 40:
 				$size_x = 36;
 				$size_y = 41;
-				imagecopy($this->image, $this->imres['flag'], 
+				imagecopy($this->image, $this->imres['fine_flag'], 
 					$x * $this->brick_w + ($this->brick_w - $size_x) / 2, 
 					$y * $this->brick_h - ($size_y - $this->brick_h), 
 					0, 0, 
@@ -683,10 +683,10 @@ class NFKMap
 			case 41:
 				$size_x = 36;
 				$size_y = 41;
-				imagecopy($this->image, $this->imres['flag'], 
+				imagecopy($this->image, $this->imres['fine_flag'], 
 					$x * $this->brick_w + ($this->brick_w - $size_x) / 2, 
 					$y * $this->brick_h - ($size_y - $this->brick_h), 
-					$size_x * 14, 0, 
+					$size_x, 0, 
 					$size_x, $size_y);
 				break;
 				
@@ -706,10 +706,10 @@ class NFKMap
 		}
 		return true;
 	}
-	private function _drawFineItem($res, $x, $y)
+	private function _drawFineItem($res, $x, $y, $index)
 	{
 		imagecopy($this->image, $this->imres[$res], $x * $this->brick_w, 
-					$y * $this->brick_h - $this->brick_h, 0, 0, 37, 32);
+					$y * $this->brick_h - $this->brick_h, $index * 37, 0, 37, 32);
 	}
 	
 	
@@ -739,16 +739,10 @@ class NFKMap
 		
 		if ($this->replacefineimages)
 		{
-			$this->imres['armor'] = imagecreatefrompng('data/armor.png');
-			$this->imres['flag'] = imagecreatefrompng('data/flag.png');
-			$this->imres['fine_battle'] = imagecreatefrompng('data/fine_battle.png');
-			$this->imres['fine_fly'] = imagecreatefrompng('data/fine_fly.png');
-			$this->imres['fine_haste'] = imagecreatefrompng('data/fine_haste.png');
-			$this->imres['fine_invis'] = imagecreatefrompng('data/fine_invis.png');
+			$this->imres['fine_armor'] = imagecreatefrompng('data/fine_armor.png');
+			$this->imres['fine_flag'] = imagecreatefrompng('data/fine_flag.png');
+			$this->imres['fine_power'] = imagecreatefrompng('data/fine_power.png');
 			$this->imres['fine_mega'] = imagecreatefrompng('data/fine_mega.png');
-			$this->imres['fine_quad'] = imagecreatefrompng('data/fine_quad.png');
-			$this->imres['fine_regen'] = imagecreatefrompng('data/fine_regen.png');
-			$this->imres['fine_regen'] = imagecreatefrompng('data/fine_regen.png');
 		}
 	}
 	
