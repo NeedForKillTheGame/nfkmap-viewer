@@ -65,6 +65,7 @@ NFK Map Viewer
 * [Специальные объекты на карте](https://github.com/HarpyWar/nfkmap-viewer/wiki/Специальные-объекты-на-карте)
 
 * [Структура карты NFK MAP](https://github.com/HarpyWar/nfkmap-viewer/wiki/Структура карты NFK MAP)
+* [Файл карты в демке NFK DEMO](https://github.com/HarpyWar/nfkmap-viewer/wiki/Структура демки NFK DEMO)
 * [BMP картинка палитры](https://github.com/HarpyWar/nfkmap-viewer/wiki/BMP-картинка-палитры)
 
 
