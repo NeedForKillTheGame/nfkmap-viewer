@@ -1057,15 +1057,12 @@ function getpropsize($width, $height, $max)
 	return array($w, $h);
 }
 
-// example: ff0000 -> ff
-function inverseHex( $color )
+// example: ff0000 -> 0000ff
+function inverseHex( $hex )
 {
-	$newcolor = str_split($color, 2);
-	$newcolor = array_reverse($newcolor);
-
-	return implode($newcolor);
+	$newhex = array_reverse( str_split($hex, 2) );
+	return implode($newhex);
 }
-
 
 
 
@@ -1385,7 +1382,7 @@ class GdBmp{
 
 		//256色以下の画像か？
 		if ($bit_count == 1 || $bit_count == 4 || $bit_count == 8){
-			$img = imagecreate($width, $lines);
+			$img = imagecreatetruecolor($width, $lines);
 
 			//画像データの前にパレットデータがあるのでパレットを作成する
 			$palette_size = $header_size == 12 ? 3 : 4; //OS/2形式の� �合は x に相当する箇所のデータは最初から確保されていない
