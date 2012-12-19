@@ -179,9 +179,8 @@ class NFKMap
 		}
 		
 		// write map palette
-		if ( $this->imres && isset($this->imres['custom_palette']) )
+		if ( $this->imres && isset($this->imres['custom_palette']) && $this->imres['custom_palette'] )
 		{
-			imagebmp($this->imres['custom_palette']);
 			$pal_bin = imagebmp($this->imres['custom_palette']);
 			$pal_bz = bzcompress($pal_bin);
 			
@@ -259,8 +258,12 @@ class NFKMap
 
 			// set position to start
 			rewind($this->handle);
-			$this->pos = 0;
+			
+			
+			#if ($this->debug)
+			#	file_put_contents('test.ndm', stream_get_contents($this->handle));
 		}
+		$this->pos = 0;
 		
 		// read header
 		$this->Header = new THeader();
@@ -360,8 +363,9 @@ class NFKMap
 								: bzdecompress($pal_bz);
 				
 				// create gd object of palette
-				$this->imres['custom_palette'] = imagecreatefrombmpstream($pal_bin);
-				
+				if ( !$this->imres['custom_palette'] = imagecreatefrombmp($pal_bin) )
+					continue;
+
 				// set transparent color if enabled
 				if ($entry->Reserved6)
 				{
@@ -592,7 +596,7 @@ class NFKMap
 
 		if ($index >= 54 && $index <= 181)
 		{
-			if ( isset($this->imres['custom_palette']) )
+			if ( isset($this->imres['custom_palette']) && $this->imres['custom_palette'] )
 			{
 				$pal = $this->imres['custom_palette'];
 				$index -= 54;
@@ -973,193 +977,6 @@ class Resources
 
 
 
-// -- BMP SUPPORT --
-
-class BMP
-{	
-	public static function imagebmp(&$img, $filename = false)
-	{
-		$wid = imagesx($img);
-		$hei = imagesy($img);
-		$wid_pad = str_pad('', $wid % 4, "\0");
-		
-		$size = 54 + ($wid + $wid_pad) * $hei * 3; //fixed
-		
-		//prepare & save header
-		$header['identifier']		= 'BM';
-		$header['file_size']		= self::dword($size);
-		$header['reserved']			= self::dword(0);
-		$header['bitmap_data']		= self::dword(54);
-		$header['header_size']		= self::dword(40);
-		$header['width']			= self::dword($wid);
-		$header['height']			= self::dword($hei);
-		$header['planes']			= self::word(1);
-		$header['bits_per_pixel']	= self::word(24);
-		$header['compression']		= self::dword(0);
-		$header['data_size']		= self::dword(0);
-		$header['h_resolution']		= self::dword(0);
-		$header['v_resolution']		= self::dword(0);
-		$header['colors']			= self::dword(0);
-		$header['important_colors']	= self::dword(0);
-
-		if ($filename)
-		{
-			$f = fopen($filename, "wb");
-			foreach ($header AS $h)
-			{
-				fwrite($f, $h);
-			}
-			
-			//save pixels
-			for ($y=$hei-1; $y>=0; $y--)
-			{
-				for ($x=0; $x<$wid; $x++)
-				{
-					$rgb = imagecolorat($img, $x, $y);
-					fwrite($f, self::byte3($rgb));
-				}
-				fwrite($f, $wid_pad);
-			}
-			fclose($f);
-		}
-		else
-		{
-			$data = '';
-			foreach ($header AS $h)
-			{
-				$data .= $h;
-			}
-			
-			//save pixels
-			for ($y=$hei-1; $y>=0; $y--)
-			{
-				for ($x=0; $x<$wid; $x++)
-				{
-					$rgb = imagecolorat($img, $x, $y);
-					$data .= self::byte3($rgb);
-				}
-				$data .= $wid_pad;
-			}
-			return $data;
-		}	
-	}
-
-	public static function imagecreatefrombmp($filename)
-	{
-		$file = fopen($filename, "rb");
-		$read = fread($file, 10);
-		while (!feof($file) && ($read <> ""))
-			$read .= fread($file, 1024);
-			
-		return imagecreatefrombmpstream($read);
-	}
-
-	// http://www.xbdev.net/image_formats/bmp/index.php
-	// http://www.fileformat.info/format/bmp/egff.htm
-	public static function imagecreatefrombmpstream($stream) 
-	{
-		$temp = unpack("H*", $stream);
-		$hex = $temp[1];
-
-		$header = substr($hex, 0, 54*2);
-		if (substr($header, 0, 4) == "424d") // BM
-		{
-			$header_parts = str_split($header, 2);
-			$hsize = hexdec($header_parts[0xF] . $header_parts[0xE]); // header info size
-			
-			$width = hexdec($header_parts[0x13] . $header_parts[0x12]);
-			
-			// BMP v2, header info size = 12 bytes
-			if ($hsize == 12)
-			{
-				$height = hexdec($header_parts[0x15] . $header_parts[0x14]);
-				$bitcount = hexdec($header_parts[0x18]); // bits per pixel 8/16/24/32
-				$offset = hexdec($header_parts[0xB] . $header_parts[0xA]);
-			}
-			// normal bmp with header size = 54 bytes (+ may be garbage bytes before header and image data)
-			else
-			{
-				$height = hexdec($header_parts[0x17] . $header_parts[0x16]);
-				$bitcount = hexdec($header_parts[0x1C]); // bits per pixel 8/16/24/32
-				$imagesize = hexdec($header_parts[0x25] . $header_parts[0x24] . $header_parts[0x23] . $header_parts[0x22]); // size of image content without header
-				$offset = strlen($stream) - $imagesize;
-			}
-			
-			#debug
-			#echo "<br>hsize:$hsize |w:$width |h:$height |bits:$bitcount |offset:$offset" ;
-			#die();
-			
-			unset($header_parts);
-		}
-		$x = 0;
-		$y = 1;
-		$img = imagecreatetruecolor($width, $height);
-		$body = substr($hex, $offset * 2); // set offset
-		$body_size = (strlen($body) / 2);
-		$header_size = ($width * $height);
-		$usePadding = ($body_size > ($header_size * $bitcount/8) + 4);
-		for ($i = 0; $i < $body_size; $i+=$bitcount/8)
-		{
-			if ($x >= $width) {
-				if ($usePadding)
-					$i += $width % 4;
-				$x = 0;
-				$y++;
-				if ($y > $height)
-					break;
-			}
-			$i_pos = $i * 2;
-			
-			$r = @hexdec($body[$i_pos + 4] . $body[$i_pos + 5]);
-			$g = @hexdec($body[$i_pos + 2] . $body[$i_pos + 3]);
-			$b = @hexdec($body[$i_pos] . $body[$i_pos + 1]);
-
-			$color = imagecolorallocate($img, $r, $g, $b);
-			imagesetpixel($img, $x, $height - $y, $color);
-			$x++;
-		}
-		unset($body);
-		return $img;
-	}
-
-	private static function byte3($n)
-	{
-		return chr($n & 255) . chr(($n >> 8) & 255) . chr(($n >> 16) & 255);	
-	}
-	
-	private static function undword($n)
-	{
-		$r = unpack("V", $n);
-		return $r[1];
-	}
-	
-	private static function dword($n)
-	{
-		return pack("V", $n);
-	}
-	
-	private static function word($n)
-	{
-		return pack("v", $n);
-	}
-}
-
-
-function imagebmp(&$img, $filename = false)
-{
-	return BMP::imagebmp($img, $filename);
-}
-
-function imagecreatefrombmp($filename)
-{
-	return BMP::imagecreatefrombmp($filename);    
-}	
-function imagecreatefrombmpstream($stream)
-{
-	return BMP::imagecreatefrombmpstream($stream);    
-}
-
-
 // -- GD FUNCTIONS --
 
 function hexcoloralloc($im, $hex)
@@ -1253,3 +1070,562 @@ function inverseHex( $color )
 
 
 
+
+
+
+
+// -- BMP SUPPORT --
+function imagebmp(&$img, $filename = false) {
+	return BMP::imagebmp($img, $filename);
+}
+function imagecreatefrombmp($filename_or_stream_or_binary){
+	return GdBmp::load($filename_or_stream_or_binary);
+}
+
+
+
+/**
+ * Copyright (c) 2011, oov. All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ * 
+ *  - Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *  - Neither the name of the oov nor the names of its contributors may be used to
+ *    endorse or promote products derived from this software without specific prior
+ *    written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+ * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * bmp ファイルを GD で使えるように
+ * 
+ * 使用例:
+ *   //ファイルから読み込む� �合はGDでPNGなどを読み込むのと同じような方法で可
+ *   $image = imagecreatefrombmp("test.bmp");
+ *   imagedestroy($image);
+ * 
+ *   //文字列から読み込む� �合は以下の方法で可
+ *   $image = GdBmp::loadFromString(file_get_contents("test.bmp"));
+ *   //自動判定されるので� �損ファイルでなければこれでも上手くいく
+ *   //$image = imagecreatefrombmp(file_get_contents("test.bmp"));
+ *   imagedestroy($image);
+ * 
+ *   //その他任意のストリー� からの読み込みも可能
+ *   $stream = fopen("http://127.0.0.1/test.bmp");
+ *   $image = GdBmp::loadFromStream($stream);
+ *   //自動判定されるのでこれでもいい
+ *   //$image = imagecreatefrombmp($stream);
+ *   fclose($stream);
+ *   imagedestroy($image);
+ * 
+ * 対応フォーマット
+ *   1bit
+ *   4bit
+ *   4bitRLE
+ *   8bit
+ *   8bitRLE
+ *   16bit(任意のビットフィールド)
+ *   24bit
+ *   32bit(任意のビットフィールド)
+ *   BITMAPINFOHEADER の biCompression が BI_PNG / BI_JPEG の画像
+ *   すべての形式でトップダウン/ボト� アップの両方をサポート
+ *   特殊なビットフィールドでもビットフィールドデータが正常なら読み込み可能
+ *
+ * 以下のものは非対応
+ *   BITMAPV4HEADER と BITMAPV5HEADER に含まれる色空間に関する様々な機能
+ **/
+// https://bitbucket.org/oov/php-bmp/raw/09808861a72ac1619638ed376a0bbffe149ff0cc/GdBmp.php
+
+class GdBmp{
+	public static function load($filename_or_stream_or_binary){
+		if (is_resource($filename_or_stream_or_binary)){
+			return self::loadFromStream($filename_or_stream_or_binary);
+		} else if (is_string($filename_or_stream_or_binary) && strlen($filename_or_stream_or_binary) >= 26){
+			$bfh = unpack("vtype/Vsize", $filename_or_stream_or_binary);
+			if ($bfh["type"] == 0x4d42){
+				return self::loadFromString($filename_or_stream_or_binary);
+			}
+		}
+		return self::loadFromFile($filename_or_stream_or_binary);
+	}
+	public static function loadFromFile($filename){
+		$fp = fopen($filename, "rb");
+		if ($fp === false){
+			return false;
+		}
+
+		$bmp = self::loadFromStream($fp);
+
+		fclose($fp);
+		return $bmp;
+	}
+
+	public static function loadFromString($str){
+		//data scheme より古いバージョンから対応しているようなので php://memory を使う
+		$fp = fopen("php://memory", "r+b");
+		if ($fp === false){
+			return false;
+		}
+
+		if (fwrite($fp, $str) != strlen($str)){
+			fclose($fp);
+			return false;
+		}
+
+		if (fseek($fp, 0) === -1){
+			fclose($fp);
+			return false;
+		}
+
+		$bmp = self::loadFromStream($fp);
+
+		fclose($fp);
+		return $bmp;
+	}
+
+	public static function loadFromStream($stream){
+		$buf = fread($stream, 14); //2+4+2+2+4
+		if ($buf === false){
+			return false;
+		}
+
+		//シグネチャチェック
+		if ($buf[0] != 'B' || $buf[1] != 'M'){
+			return false;
+		}
+
+		$bitmap_file_header = unpack(
+			//BITMAPFILEHEADER構� 体
+			"vtype/".
+			"Vsize/".
+			"vreserved1/".
+			"vreserved2/".
+			"Voffbits", $buf
+		);
+		
+		return self::loadFromStreamAndFileHeader($stream, $bitmap_file_header);
+	}
+
+	public static function loadFromStreamAndFileHeader($stream, array $bitmap_file_header){
+		if ($bitmap_file_header["type"] != 0x4d42){
+			return false;
+		}
+
+		//情� �ヘッダサイズを元に形式を区別して読み込み
+		$buf = fread($stream, 4);
+		if ($buf === false){
+			return false;
+		}
+		list(,$header_size) = unpack("V", $buf);
+
+
+		if ($header_size == 12){
+			$buf = fread($stream, $header_size - 4);
+			if ($buf === false){
+				return false;
+			}
+
+			extract(unpack(
+				//BITMAPCOREHEADER構� 体 - OS/2 Bitmap
+				"vwidth/".
+				"vheight/".
+				"vplanes/".
+				"vbit_count", $buf
+			));
+			//飛んでこない分は 0 で初期化しておく
+			$clr_used = $clr_important = $alpha_mask = $compression = 0;
+
+			//マスク類は初期化されないのでここで割り当てておく
+			$red_mask   = 0x00ff0000;
+			$green_mask = 0x0000ff00;
+			$blue_mask  = 0x000000ff;
+		} else if (124 < $header_size || $header_size < 40) {
+			//未知の形式
+			return false;
+		} else {
+			//この時点で36バイト読めることまではわかっている
+			$buf = fread($stream, 36); //既に読ん� 部分は除外しつつBITMAPINFOHEADERのサイズ� け読む
+			if ($buf === false){
+				return false;
+			}
+
+			//BITMAPINFOHEADER構� 体 - Windows Bitmap
+			extract(unpack(
+				"Vwidth/".
+				"Vheight/".
+				"vplanes/".
+				"vbit_count/".
+				"Vcompression/".
+				"Vsize_image/".
+				"Vx_pels_per_meter/".
+				"Vy_pels_per_meter/".
+				"Vclr_used/".
+				"Vclr_important", $buf
+			));
+			
+			// fix stream size if wrong
+			$pos = ftell($stream);
+			rewind($stream);
+			$bitmap_file_header["size"] = strlen( stream_get_contents($stream) );
+			fseek($stream, $pos);
+			
+			//� の整数を受け取る可能性があるものは自前で変換する
+			if ($width  & 0x80000000){ $width  = -(~$width  & 0xffffffff) - 1; }
+			if ($height & 0x80000000){ $height = -(~$height & 0xffffffff) - 1; }
+			if ($x_pels_per_meter & 0x80000000){ $x_pels_per_meter = -(~$x_pels_per_meter & 0xffffffff) - 1; }
+			if ($y_pels_per_meter & 0x80000000){ $y_pels_per_meter = -(~$y_pels_per_meter & 0xffffffff) - 1; }
+
+			//ファイルによっては BITMAPINFOHEADER のサイズがおかしい（書き込み間違い？）ケースがある
+			//自分でファイルサイズを元に逆算することで回避できることもあるので再計算できそうなら正当性を調べる
+			//シークできないストリー� の� �合全体のファイルサイズは取得できないので、$bitmap_file_headerにサイズ申告がなければやらない
+			if ($bitmap_file_header["size"] != 0){
+				$colorsize = $bit_count == 1 || $bit_count == 4 || $bit_count == 8 ? ($clr_used ? $clr_used : pow(2, $bit_count))<<2 : 0;
+				$bodysize = $size_image ? $size_image : ((($width * $bit_count + 31) >> 3) & ~3) * abs($height);
+				$calcsize = $bitmap_file_header["size"] - $bodysize - $colorsize - 14;
+				//本来であれば一致するはずなのに合わない時は、値がおかしくなさそうなら（BITMAPV5HEADERの範囲内なら）計算して求めた値を採用する
+				if ($header_size < $calcsize && 40 <= $header_size && $header_size <= 124){
+					$header_size = $calcsize;
+				}
+				
+				// fix offset if wrong
+				if ( $bitmap_file_header["offbits"] != ($bitmap_file_header["size"] - $bodysize) )
+				{
+					fseek($stream, $bitmap_file_header["size"] - $bodysize);
+					
+					// set header size to pass next condition
+					$header_size = 40;
+				}
+			}
+			
+			//BITMAPV4HEADER や BITMAPV5HEADER の� �合ま� 読むべきデータが残っている可能性がある
+			if ($header_size - 40 > 0){
+				$buf = fread($stream, $header_size - 40);
+				if ($buf === false){
+					return false;
+				}
+
+				extract(unpack(
+					//BITMAPV4HEADER構� 体(Windows95以降)
+					//BITMAPV5HEADER構� 体(Windows98/2000以降)
+					"Vred_mask/".
+					"Vgreen_mask/".
+					"Vblue_mask/".
+					"Valpha_mask", $buf . str_repeat("\x00", 120)
+				));
+			} else {
+				$alpha_mask = $red_mask = $green_mask = $blue_mask = 0;
+			}
+
+			//パレットがないがカラーマスクもない時
+			if (
+				($bit_count == 16 || $bit_count == 24 || $bit_count == 32)&&
+				$compression == 0 &&
+				$red_mask == 0 && $green_mask == 0 && $blue_mask == 0
+			){
+				//もしカラーマスクを所持していない� �合は
+				//規定のカラーマスクを適用する
+				switch($bit_count){
+				case 16:
+					$red_mask   = 0x7c00;
+					$green_mask = 0x03e0;
+					$blue_mask  = 0x001f;
+					break;
+				case 24:
+				case 32:
+					$red_mask   = 0x00ff0000;
+					$green_mask = 0x0000ff00;
+					$blue_mask  = 0x000000ff;
+					break;
+				}
+			}
+		}
+
+		if (
+			($width  == 0)||
+			($height == 0)||
+			($planes != 1)||
+			(($alpha_mask & $red_mask  ) != 0)||
+			(($alpha_mask & $green_mask) != 0)||
+			(($alpha_mask & $blue_mask ) != 0)||
+			(($red_mask   & $green_mask) != 0)||
+			(($red_mask   & $blue_mask ) != 0)||
+			(($green_mask & $blue_mask ) != 0)
+		){
+			//不正な画像
+			return false;
+		}
+
+		//BI_JPEG と BI_PNG の� �合は jpeg/png がそのまま入ってる� けなのでそのまま取り出してデコードする
+		if ($compression == 4 || $compression == 5){
+			$buf = stream_get_contents($stream, $size_image);
+			if ($buf === false){
+				return false;
+			}
+			return imagecreatefromstring($buf);
+		}
+
+		//画像本体の読み出し
+		//1行のバイト数
+		$line_bytes = (($width * $bit_count + 31) >> 3) & ~3;
+		//全体の行数
+		$lines = abs($height);
+		//y軸進行量（ボト� アップかトップダウンか）
+		$y = $height > 0 ? $lines-1 : 0;
+		$line_step = $height > 0 ? -1 : 1;
+
+		//256色以下の画像か？
+		if ($bit_count == 1 || $bit_count == 4 || $bit_count == 8){
+			$img = imagecreate($width, $lines);
+
+			//画像データの前にパレットデータがあるのでパレットを作成する
+			$palette_size = $header_size == 12 ? 3 : 4; //OS/2形式の� �合は x に相当する箇所のデータは最初から確保されていない
+			$colors = $clr_used ? $clr_used : pow(2, $bit_count); //色数
+			$palette = array();
+			for($i = 0; $i < $colors; ++$i){
+				$buf = fread($stream, $palette_size);
+				if ($buf === false){
+					imagedestroy($img);
+					return false;
+				}
+				extract(unpack("Cb/Cg/Cr/Cx", $buf . "\x00"));
+				$palette[] = imagecolorallocate($img, $r, $g, $b);
+			}
+
+			$shift_base = 8 - $bit_count;
+			$mask = ((1 << $bit_count) - 1) << $shift_base;
+
+			//圧縮されている� �合とされていない� �合でデコード処理が大きく変わる
+			if ($compression == 1 || $compression == 2){
+				$x = 0;
+				$qrt_mod2 = $bit_count >> 2 & 1;
+				for(;;){
+					//もし描写先が範囲外になっている� �合デコード処理がおかしくなっているので抜ける
+					//変なデータが渡されたとしても最悪なケースで255回程度の無駄なので目を瞑る
+					if ($x < -1 || $x > $width || $y < -1 || $y > $height){
+						imagedestroy($img);
+						return false;
+					}
+					$buf = fread($stream, 1);
+					if ($buf === false){
+						imagedestroy($img);
+						return false;
+					}
+					switch($buf){
+					case "\x00":
+						$buf = fread($stream, 1);
+						if ($buf === false){
+							imagedestroy($img);
+							return false;
+						}
+						switch($buf){
+						case "\x00": //EOL
+							$y += $line_step;
+							$x = 0;
+							break;
+						case "\x01": //EOB
+							$y = 0;
+							$x = 0;
+							break 3;
+						case "\x02": //MOV
+							$buf = fread($stream, 2);
+							if ($buf === false){
+								imagedestroy($img);
+								return false;
+							}
+							list(,$xx, $yy) = unpack("C2", $buf);
+							$x += $xx;
+							$y += $yy * $line_step;
+							break;
+						default:     //ABS
+							list(,$pixels) = unpack("C", $buf);
+							$bytes = ($pixels >> $qrt_mod2) + ($pixels & $qrt_mod2);
+							$buf = fread($stream, ($bytes + 1) & ~1);
+							if ($buf === false){
+								imagedestroy($img);
+								return false;
+							}
+							for ($i = 0, $pos = 0; $i < $pixels; ++$i, ++$x, $pos += $bit_count){
+								list(,$c) = unpack("C", $buf[$pos >> 3]);
+								$b = $pos & 0x07;
+								imagesetpixel($img, $x, $y, $palette[($c & ($mask >> $b)) >> ($shift_base - $b)]);
+							}
+							break;
+						}
+						break;
+					default:
+						$buf2 = fread($stream, 1);
+						if ($buf2 === false){
+							imagedestroy($img);
+							return false;
+						}
+						list(,$size, $c) = unpack("C2", $buf . $buf2);
+						for($i = 0, $pos = 0; $i < $size; ++$i, ++$x, $pos += $bit_count){
+							$b = $pos & 0x07;
+							imagesetpixel($img, $x, $y, $palette[($c & ($mask >> $b)) >> ($shift_base - $b)]);
+						}
+						break;
+					}
+				}
+			} else {
+				for ($line = 0; $line < $lines; ++$line, $y += $line_step){
+					$buf = fread($stream, $line_bytes);
+					if ($buf === false){
+						imagedestroy($img);
+						return false;
+					}
+
+					$pos = 0;
+					for ($x = 0; $x < $width; ++$x, $pos += $bit_count){
+						list(,$c) = unpack("C", $buf[$pos >> 3]);
+						$b = $pos & 0x7;
+						imagesetpixel($img, $x, $y, $palette[($c & ($mask >> $b)) >> ($shift_base - $b)]);
+					}
+				}
+			}
+		} else {
+			$img = imagecreatetruecolor($width, $lines);
+			imagealphablending($img, false);
+			if ($alpha_mask)
+			{
+				//αデータがあるので透過情� �も保存できるように
+				imagesavealpha($img, true);
+			}
+
+			//x軸進行量
+			$pixel_step = $bit_count >> 3;
+			$alpha_max    = $alpha_mask ? 0x7f : 0x00;
+			$alpha_mask_r = $alpha_mask ? 1/$alpha_mask : 1;
+			$red_mask_r   = $red_mask   ? 1/$red_mask   : 1;
+			$green_mask_r = $green_mask ? 1/$green_mask : 1;
+			$blue_mask_r  = $blue_mask  ? 1/$blue_mask  : 1;
+
+			for ($line = 0; $line < $lines; ++$line, $y += $line_step){
+				$buf = fread($stream, $line_bytes);
+				if ($buf === false){
+					imagedestroy($img);
+					return false;
+				}
+
+				$pos = 0;
+				for ($x = 0; $x < $width; ++$x, $pos += $pixel_step){
+					list(,$c) = unpack("V", substr($buf, $pos, $pixel_step). "\x00\x00");
+					$a_masked = $c & $alpha_mask;
+					$r_masked = $c & $red_mask;
+					$g_masked = $c & $green_mask;
+					$b_masked = $c & $blue_mask;
+					$a = $alpha_max - ((($a_masked<<7) - $a_masked) * $alpha_mask_r);
+					$r = (($r_masked<<8) - $r_masked) * $red_mask_r;
+					$g = (($g_masked<<8) - $g_masked) * $green_mask_r;
+					$b = (($b_masked<<8) - $b_masked) * $blue_mask_r;
+					imagesetpixel($img, $x, $y, ($a<<24)|($r<<16)|($g<<8)|$b);
+				}
+			}
+			imagealphablending($img, true); //デフォルト値に戻しておく
+		}
+		return $img;
+	}
+}
+
+class BMP
+{	
+	public static function imagebmp(&$img, $filename = false)
+	{
+		$wid = imagesx($img);
+		$hei = imagesy($img);
+		$wid_pad = str_pad('', $wid % 4, "\0");
+		
+		$size = 54 + ($wid + $wid_pad) * $hei * 3; //fixed
+		
+		//prepare & save header
+		$header['identifier']		= 'BM';
+		$header['file_size']		= self::dword($size);
+		$header['reserved']			= self::dword(0);
+		$header['bitmap_data']		= self::dword(54);
+		$header['header_size']		= self::dword(40);
+		$header['width']			= self::dword($wid);
+		$header['height']			= self::dword($hei);
+		$header['planes']			= self::word(1);
+		$header['bits_per_pixel']	= self::word(24);
+		$header['compression']		= self::dword(0);
+		$header['data_size']		= self::dword(0);
+		$header['h_resolution']		= self::dword(0);
+		$header['v_resolution']		= self::dword(0);
+		$header['colors']			= self::dword(0);
+		$header['important_colors']	= self::dword(0);
+
+		if ($filename)
+		{
+			$f = fopen($filename, "wb");
+			foreach ($header AS $h)
+			{
+				fwrite($f, $h);
+			}
+			
+			//save pixels
+			for ($y=$hei-1; $y>=0; $y--)
+			{
+				for ($x=0; $x<$wid; $x++)
+				{
+					$rgb = imagecolorat($img, $x, $y);
+					fwrite($f, self::byte3($rgb));
+				}
+				fwrite($f, $wid_pad);
+			}
+			fclose($f);
+		}
+		else
+		{
+			$data = '';
+			foreach ($header AS $h)
+			{
+				$data .= $h;
+			}
+			
+			//save pixels
+			for ($y=$hei-1; $y>=0; $y--)
+			{
+				for ($x=0; $x<$wid; $x++)
+				{
+					$rgb = imagecolorat($img, $x, $y);
+					$data .= self::byte3($rgb);
+				}
+				$data .= $wid_pad;
+			}
+			return $data;
+		}	
+	}
+	
+	private static function byte3($n)
+	{
+		return chr($n & 255) . chr(($n >> 8) & 255) . chr(($n >> 16) & 255);	
+	}
+	
+	private static function undword($n)
+	{
+		$r = unpack("V", $n);
+		return $r[1];
+	}
+	
+	private static function dword($n)
+	{
+		return pack("V", $n);
+	}
+	
+	private static function word($n)
+	{
+		return pack("v", $n);
+	}
+}
