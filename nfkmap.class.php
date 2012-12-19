@@ -62,6 +62,9 @@ class NFKMap
 	// palette transparent color
 	private $transparent_color = false;
 	
+	// palette original image
+	private $custom_palette_bin = false;
+	
 	// final map gd object that can be saved
 	private $image; 
 	
@@ -117,13 +120,6 @@ class NFKMap
 		imagepng($this->image);
 		#return ob_get_contents(); // return bytes
 	}	
-	
-	// return unique md5 hash of the map bytes
-	public function GetHash()
-	{
-		return md5($this->stream);
-	}
-
 	
 	// save map bytes to a mapa file
 	public function SaveMap($filename = false)
@@ -181,14 +177,13 @@ class NFKMap
 		// write map palette
 		if ( $this->imres && isset($this->imres['custom_palette']) && $this->imres['custom_palette'] )
 		{
-			$pal_bin = imagebmp($this->imres['custom_palette']);
-			$pal_bz = bzcompress($pal_bin);
+			$pal_bz = bzcompress($this->custom_palette_bin);
 			
 			// entry
 			$this->putByte(0x03); // 0x03 header of string
 			$this->putString('pal'); 
 			
-			$this->putInt(strlen($pal_bz), true); // bmp size
+			$this->putInt(strlen($pal_bz)); // bmp size
 			$this->putByte(0);
 			$this->putWord(0);
 			$this->putInt(0);
@@ -206,7 +201,7 @@ class NFKMap
 				$this->putByte(0x03); // 0x03 header of string
 				$this->putString('loc'); 
 				
-				$this->putInt(count($this->Locations) * $this->tlocation_size, true); // locations size
+				$this->putInt(count($this->Locations) * $this->tlocation_size); // locations size
 				$this->putByte(0);
 				$this->putWord(0);
 				$this->putInt(0);
@@ -264,6 +259,7 @@ class NFKMap
 			#	file_put_contents('test.ndm', stream_get_contents($this->handle));
 		}
 		$this->pos = 0;
+		$this->stream = '';
 		
 		// read header
 		$this->Header = new THeader();
@@ -358,12 +354,12 @@ class NFKMap
 				$pal_bz = $this->getString($entry->DataSize);
 				
 				// decompress if map and nothing to do if demo file
-				$pal_bin = ( $this->Header->ID == "NDEM" )
+				$this->custom_palette_bin = ($this->Header->ID == "NDEM")
 								? $pal_bz
 								: bzdecompress($pal_bz);
 				
 				// create gd object of palette
-				if ( !$this->imres['custom_palette'] = imagecreatefrombmp($pal_bin) )
+				if ( !$this->imres['custom_palette'] = imagecreatefrombmp($this->custom_palette_bin) )
 					continue;
 
 				// set transparent color if enabled
@@ -379,7 +375,7 @@ class NFKMap
 			
 				if ($this->debug) // (save palette to file)
 				{
-					file_put_contents("palette_map.bmp", $pal_bin); // original
+					file_put_contents("palette_map.bmp", $this->custom_palette_bin); // original
 					imagepng($this->imres['custom_palette'], "palette_map.png"); // handled
 				}
 			}
@@ -408,10 +404,14 @@ class NFKMap
 				if ($this->debug)
 					echo "<br>end of file: " . strlen($this->stream) . '|' . $this->pos;
 					
-				// remove TMapEntry length from the stream if file bigger than it should
-				if ( strlen($this->stream) == $this->pos )
-					$stream = substr($this->stream, 0, strlen($this->stream) - 24);
-				
+				// FIXME: not needed cause stream is different with original
+				// remove TMapEntry length from the end of stream if file bigger than it should
+				#if ( strlen($this->stream) == $this->pos )
+				#	$this->stream = substr($this->stream, 0, strlen($this->stream) - 24);
+				// fix header id and version in stream for map extracted from demo
+				#if ($this->Header->ID == "NDEM")
+				#	$this->stream = 'NMAP' . chr(3) . substr($this->stream, 5, strlen($this->stream) - 5);
+		
 				break;
 			}
 		}
@@ -844,7 +844,7 @@ class NFKMap
 	{
 		// fill string to fixed length
 		if ($fix_len)
-			$value = str_pad($value, $fix_len, "phpmapeditor", STR_PAD_RIGHT);
+			$value = str_pad($value, $fix_len, chr(0), STR_PAD_RIGHT);
 		
 		$this->write($value);
 	}
@@ -1075,9 +1075,6 @@ function inverseHex( $color )
 
 
 // -- BMP SUPPORT --
-function imagebmp(&$img, $filename = false) {
-	return BMP::imagebmp($img, $filename);
-}
 function imagecreatefrombmp($filename_or_stream_or_binary){
 	return GdBmp::load($filename_or_stream_or_binary);
 }
@@ -1536,96 +1533,5 @@ class GdBmp{
 			imagealphablending($img, true); //デフォルト値に戻しておく
 		}
 		return $img;
-	}
-}
-
-class BMP
-{	
-	public static function imagebmp(&$img, $filename = false)
-	{
-		$wid = imagesx($img);
-		$hei = imagesy($img);
-		$wid_pad = str_pad('', $wid % 4, "\0");
-		
-		$size = 54 + ($wid + $wid_pad) * $hei * 3; //fixed
-		
-		//prepare & save header
-		$header['identifier']		= 'BM';
-		$header['file_size']		= self::dword($size);
-		$header['reserved']			= self::dword(0);
-		$header['bitmap_data']		= self::dword(54);
-		$header['header_size']		= self::dword(40);
-		$header['width']			= self::dword($wid);
-		$header['height']			= self::dword($hei);
-		$header['planes']			= self::word(1);
-		$header['bits_per_pixel']	= self::word(24);
-		$header['compression']		= self::dword(0);
-		$header['data_size']		= self::dword(0);
-		$header['h_resolution']		= self::dword(0);
-		$header['v_resolution']		= self::dword(0);
-		$header['colors']			= self::dword(0);
-		$header['important_colors']	= self::dword(0);
-
-		if ($filename)
-		{
-			$f = fopen($filename, "wb");
-			foreach ($header AS $h)
-			{
-				fwrite($f, $h);
-			}
-			
-			//save pixels
-			for ($y=$hei-1; $y>=0; $y--)
-			{
-				for ($x=0; $x<$wid; $x++)
-				{
-					$rgb = imagecolorat($img, $x, $y);
-					fwrite($f, self::byte3($rgb));
-				}
-				fwrite($f, $wid_pad);
-			}
-			fclose($f);
-		}
-		else
-		{
-			$data = '';
-			foreach ($header AS $h)
-			{
-				$data .= $h;
-			}
-			
-			//save pixels
-			for ($y=$hei-1; $y>=0; $y--)
-			{
-				for ($x=0; $x<$wid; $x++)
-				{
-					$rgb = imagecolorat($img, $x, $y);
-					$data .= self::byte3($rgb);
-				}
-				$data .= $wid_pad;
-			}
-			return $data;
-		}	
-	}
-	
-	private static function byte3($n)
-	{
-		return chr($n & 255) . chr(($n >> 8) & 255) . chr(($n >> 16) & 255);	
-	}
-	
-	private static function undword($n)
-	{
-		$r = unpack("V", $n);
-		return $r[1];
-	}
-	
-	private static function dword($n)
-	{
-		return pack("V", $n);
-	}
-	
-	private static function word($n)
-	{
-		return pack("v", $n);
 	}
 }
