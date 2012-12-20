@@ -124,6 +124,17 @@ class NFKMap
 	// save map bytes to a mapa file
 	public function SaveMap($filename = false)
 	{
+		if (!$filename)
+			$filename = $this->getFileName();
+	
+
+		// write generated data to a file
+		file_put_contents($filename . '.mapa', $this->GetMapString() );
+	}
+	
+	// return map binary string
+	public function GetMapString()
+	{
 		$this->stream = '';
 
 		// write header
@@ -219,13 +230,8 @@ class NFKMap
 				}
 		}
 		
-		if (!$filename)
-			$filename = $this->getFileName();
-	
-		// write generated data to a file
-		file_put_contents($filename . '.mapa', $this->stream);
+		return $this->stream;
 	}
-
 	
 	// open and parse map file (or demo file)
 	public function LoadMap()

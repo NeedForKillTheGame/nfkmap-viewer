@@ -56,6 +56,9 @@ NFK Map Viewer
     $bad = array_merge( array_map('chr', range(0,31)), array("<", ">", ":", '"', "/", "\\", "|", "?", "*"));
     $filename = str_replace($bad, '', $this->Header->MapName);
     
+	// хеш содержимого карты
+	#$hash = md5( $nmap->GetMapString() );
+	
     $nmap->SaveMap($filename);
 
 
