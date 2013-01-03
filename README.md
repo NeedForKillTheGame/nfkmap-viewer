@@ -8,7 +8,7 @@ NFK Map Viewer
 
 ### Примеры использования (более подробно в example.php):
 
-1. Сохранение полноразмерной картинки из существующей карты:
+Сохранение полноразмерной картинки из существующей карты:
 
     require_once("nfkmap.class.php");
 	
@@ -19,7 +19,7 @@ NFK Map Viewer
 
 ![](http://habrastorage.org/storage2/9da/b58/0f1/9dab580f1202e3049eec694522530da2.png)
 	
-2. Можно создать свою карту, или изменить существующую:
+Можно создать свою карту, или изменить существующую:
 
     $nmap = new NFKMap("test.mapa");
     
@@ -47,7 +47,7 @@ NFK Map Viewer
 	
 ![](http://habrastorage.org/storage2/158/372/863/158372863d1b504365c681a8d1db97ee.png)
 
-3. Можно извлечь и сохранить карту `.mapa` из демки:
+Можно извлечь и сохранить карту `.mapa` из демки:
 
     $nmap = new NFKMap("demo.ndm");
     $nmap->LoadMap();
