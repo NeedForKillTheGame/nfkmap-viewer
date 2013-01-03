@@ -758,8 +758,7 @@ class NFKMap
 		// set palette transparent color
 		$color = imagecolorat($this->imres['palette'], 0, 0); // get first pixel color
 		imagecolortransparent($this->imres['palette'], $color);
-		
-		
+
 		if ($this->background !== false)
 		{
 			// if background index was not set then use MAP background
@@ -1276,7 +1275,7 @@ class GdBmp{
 				"Vclr_important", $buf
 			));
 			
-			// fix stream size if wrong
+			// HarpyWar: fix stream size if wrong
 			$pos = ftell($stream);
 			rewind($stream);
 			$bitmap_file_header["size"] = strlen( stream_get_contents($stream) );
@@ -1300,7 +1299,7 @@ class GdBmp{
 					$header_size = $calcsize;
 				}
 				
-				// fix offset if wrong
+				// HarpyWar: fix offset if wrong
 				if ( $bitmap_file_header["offbits"] != ($bitmap_file_header["size"] - $bodysize) )
 				{
 					fseek($stream, $bitmap_file_header["size"] - $bodysize);
@@ -1352,7 +1351,7 @@ class GdBmp{
 				}
 			}
 		}
-
+		
 		if (
 			($width  == 0)||
 			($height == 0)||
@@ -1526,11 +1525,25 @@ class GdBmp{
 					$r_masked = $c & $red_mask;
 					$g_masked = $c & $green_mask;
 					$b_masked = $c & $blue_mask;
+					
 					$a = $alpha_max - ((($a_masked<<7) - $a_masked) * $alpha_mask_r);
 					$r = (($r_masked<<8) - $r_masked) * $red_mask_r;
 					$g = (($g_masked<<8) - $g_masked) * $green_mask_r;
 					$b = (($b_masked<<8) - $b_masked) * $blue_mask_r;
-					imagesetpixel($img, $x, $y, ($a<<24)|($r<<16)|($g<<8)|$b);
+
+					
+					// debug
+					#var_dump("<br>", dechex($r_masked>>16), dechex($g_masked>>8), dechex($b_masked));
+					
+					
+					if ($bit_count == 16)
+						imagesetpixel($img, $x, $y, ($a<<24)|($r<<16)|($g<<8)|$b);
+					else
+					{
+						// HarpyWar: fix for 24/32 bit color
+						$color = imagecolorallocate($img, $r_masked>>16, $g_masked>>8, $b_masked);
+						imagesetpixel($img, $x, $y, $color);
+					}
 				}
 			}
 			imagealphablending($img, true); //デフォルト値に戻しておく

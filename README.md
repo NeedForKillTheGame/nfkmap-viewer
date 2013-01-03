@@ -1,14 +1,14 @@
 NFK Map Viewer
 ==============
 
-Генерирует изображение карты из .mapa/.ndm файлов игры [Need For Kill](http://needforkill.ru)
+Генерирует изображение карты из файлов `.mapa` и `.ndm` игры [Need For Kill](http://needforkill.ru)
 
 Пример работы скрипта: [http://harpywar.com/test/nfkmap/](http://harpywar.com/test/nfkmap/)
 
 
 ### Примеры использования (более подробно в example.php):
 
-Сохранение полноразмерной картинки из существующей карты:
+1. Сохранение полноразмерной картинки из существующей карты:
 
     require_once("nfkmap.class.php");
 	
@@ -19,7 +19,7 @@ NFK Map Viewer
 
 ![](http://habrastorage.org/storage2/9da/b58/0f1/9dab580f1202e3049eec694522530da2.png)
 	
-Можно создать свою карту, или изменить существующую:
+2. Можно создать свою карту, или изменить существующую:
 
     $nmap = new NFKMap("test.mapa");
     
@@ -47,12 +47,12 @@ NFK Map Viewer
 	
 ![](http://habrastorage.org/storage2/158/372/863/158372863d1b504365c681a8d1db97ee.png)
 
-Можно извлечь и сохранить карту .mapa из демки:
+3. Можно извлечь и сохранить карту `.mapa` из демки:
 
     $nmap = new NFKMap("demo.ndm");
     $nmap->LoadMap();
     
-    // удалить из названия карты неразрешенные в имени файла символы
+    // удалить из названия карты неразрешенные символы в имени файла
     $bad = array_merge( array_map('chr', range(0,31)), array("<", ">", ":", '"', "/", "\\", "|", "?", "*"));
     $filename = str_replace($bad, '', $this->Header->MapName);
     
