@@ -6,7 +6,7 @@
 // Author: HarpyWar (harpywar@gmail.com)
 // Webpage: http://harpywar.com
 // Project page: https://github.com/HarpyWar/nfkmap-viewer
-// Version: 15.12.2012
+// Version: 04.01.2012
 // Requirements: PHP >=5.3 with enabled extensions: php_gd2, php_bz2
 // ----------------------------------------------------------
 class NFKMap
@@ -57,7 +57,7 @@ class NFKMap
 	private $pos = 0;
 
 	// resources
-	private $imres;
+	private $imres = array();
 	
 	// palette transparent color
 	private $transparent_color = false;
@@ -79,7 +79,7 @@ class NFKMap
 	private $tlocation_size = 68; // size in bytes of one TLocationText structure
 
 
-	// load and parse map stream
+	// initializer
 	public function __construct($filename)
 	{
 		$this->filename = $filename;
@@ -133,7 +133,7 @@ class NFKMap
 	}
 	
 	// return map binary string
-	public function GetMapString()
+	public function GetMapStream()
 	{
 		$this->stream = '';
 

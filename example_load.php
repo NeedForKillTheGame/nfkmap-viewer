@@ -2,7 +2,7 @@
 require_once("nfkmap.class.php");
 
 // PHP GD can allocate ~40MB of RAM for when drawing a very large map (250x250) 
-ini_set('memory_limit', '64');
+ini_set('memory_limit', '64M');
 
 $filename = "tourney4.mapa";
 

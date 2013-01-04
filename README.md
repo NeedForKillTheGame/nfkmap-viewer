@@ -6,6 +6,11 @@ NFK Map Viewer
 Пример работы скрипта: [http://harpywar.com/test/nfkmap/](http://harpywar.com/test/nfkmap/)
 
 
+### Требования
+
+PHP >= 5.3 с включенными расширениями `php_gd2` и `php_bz2`
+
+
 ### Примеры использования (более подробно в example.php):
 
 Сохранение полноразмерной картинки из существующей карты:
@@ -57,7 +62,7 @@ NFK Map Viewer
     $filename = str_replace($bad, '', $this->Header->MapName);
     
     // хеш содержимого карты
-    #$hash = md5( $nmap->GetMapString() );
+    #$hash = md5( $nmap->GetMapStream()() );
     
     $nmap->SaveMap($filename);
 
