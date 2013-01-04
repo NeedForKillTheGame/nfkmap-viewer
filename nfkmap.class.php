@@ -6,7 +6,7 @@
 // Author: HarpyWar (harpywar@gmail.com)
 // Webpage: http://harpywar.com
 // Project page: https://github.com/HarpyWar/nfkmap-viewer
-// Version: 04.01.2012
+// Version: 04.01.2013
 // Requirements: PHP >=5.3 with enabled extensions: php_gd2, php_bz2
 // ----------------------------------------------------------
 class NFKMap
