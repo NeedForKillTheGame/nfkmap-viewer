@@ -129,7 +129,7 @@ class NFKMap
 	
 
 		// write generated data to a file
-		file_put_contents($filename . '.mapa', $this->GetMapString() );
+		file_put_contents($filename . '.mapa', $this->GetMapStream() );
 	}
 	
 	// return map binary string
@@ -613,11 +613,11 @@ class NFKMap
 	
 		// default palette width: 8 bricks
 		// custom palette width: 7 bricks
-		$pal_width = imagesx($pal) / $this->brick_w;
+		$pal_width = floor(imagesx($pal) / $this->brick_w);
 		
 		// find brick position
-		$x = $index % $pal_width * $this->brick_w;
-		$y = floor($index / $pal_width ) * $this->brick_h;
+		$x = ($index % $pal_width) * $this->brick_w;
+		$y = floor($index / $pal_width) * $this->brick_h;
 		
 		$brick = imagecreatetruecolor($this->brick_w, $this->brick_h); 
 		
