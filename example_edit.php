@@ -1,5 +1,6 @@
 <?php
 require_once("nfkmap.class.php");
+require_once("mapobj.class.php");
 
 $filename = "test.mapa";
 
@@ -19,17 +20,17 @@ try
 				$nmap->Bricks[$x][$y] = 228;
 	
 	// create respawn on the left corner
-	$nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = 34;
+	$nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = SimpleObject::Respawn();
 	
 	// create portal in the right corner, it will teleport player to the left corner
-	$obj = new TMapObj();
-	$obj->active = 1;
-	$obj->x = $nmap->Header->MapSizeX - 2; // x
-	$obj->y = $nmap->Header->MapSizeY - 2; // y
-	$obj->length = 2; // goto x
-	$obj->dir = $nmap->Header->MapSizeY - 2; // goto y
-	$obj->objtype = 1; // 1 = portal
-	
+	$obj = SpecialObject::Teleport
+	(
+		$nmap->Header->MapSizeX - 2, // x
+		$nmap->Header->MapSizeY - 2, // y
+		2, // goto x
+		$nmap->Header->MapSizeY - 2 // goto y
+	); 
+
 	$nmap->Objects[] = $obj; // add teleport to the map object list
 
 	
