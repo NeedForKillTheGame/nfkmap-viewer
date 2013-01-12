@@ -25,7 +25,10 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
 ![](http://habrastorage.org/storage2/9da/b58/0f1/9dab580f1202e3049eec694522530da2.png)
 	
 Можно создать свою карту, или изменить существующую:
-
+    
+    // хелпер для удобного создания объектов и более читаемого кода
+    require_once("mapobj.class.php");
+    
     $nmap = new NFKMap("test.mapa");
     
     // следующий код заполнит бриками границу карты
@@ -35,16 +38,16 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
     			$nmap->Bricks[$x][$y] = 228;
     
     // респавн в левом нижнем углу
-    $nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = 34;
+    $nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = SimpleObject::Respawn();
     
     // установим в правом нижнем углу портал, с телепортом в левый нижний угол
-    $obj = new TMapObj();
-    $obj->active = 1; // всегда 1
-    $obj->x = $nmap->Header->MapSizeX - 2; // x
-    $obj->y = $nmap->Header->MapSizeY - 2; // y
-    $obj->length = 2; // goto x
-    $obj->dir = $nmap->Header->MapSizeY - 2; // goto y
-    $obj->objtype = 1; // 1 = портал
+    $obj = SpecialObject::Teleport
+    (
+    	$nmap->Header->MapSizeX - 2, // x
+    	$nmap->Header->MapSizeY - 2, // y
+    	2, // goto x
+    	$nmap->Header->MapSizeY - 2 // goto y
+    ); 
     
     $nmap->Objects[] = $obj; // добавить портал в массив объектов
     
