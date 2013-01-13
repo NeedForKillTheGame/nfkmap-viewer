@@ -1,7 +1,7 @@
 NFK Map Viewer
 ==============
 
-Генерирует изображение карты из файлов `.mapa` и `.ndm` игры [Need For Kill](http://needforkill.ru)
+Генерирует изображение карты из файла `.mapa` игры [Need For Kill](http://needforkill.ru)
 
 Пример работы скрипта: [http://harpywar.com/test/nfkmap/](http://harpywar.com/test/nfkmap/)
 
@@ -11,22 +11,22 @@ NFK Map Viewer
 PHP >= 5.3 с включенными расширениями `php_gd2` и `php_bz2`
 
 
-### Примеры использования (более подробно в example.php):
+### Примеры использования (более подробно в examples):
 
-Сохранение полноразмерной картинки из существующей карты:
+Сохранение полноразмерного изображения из существующей карты:
 
     require_once("nfkmap.class.php");
 	
     $nmap = new NFKMap("tourney4.mapa");
 	$nmap->LoadMap();
-    $nmap->DrawMap();
-    $nmap->SaveMapImage();
+    $im = $nmap->DrawMap();
+    imagepng($im, $nmap->GetFileName() . '.png');
 
 ![](http://habrastorage.org/storage2/9da/b58/0f1/9dab580f1202e3049eec694522530da2.png)
 	
 Можно создать свою карту, или изменить существующую:
     
-    // хелпер для удобного создания объектов и более читаемого кода
+    // хелпер для удобного создания объектов и более понятного кода
     require_once("mapobj.class.php");
     
     $nmap = new NFKMap("test.mapa");
@@ -60,12 +60,8 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
     $nmap = new NFKMap("demo.ndm");
     $nmap->LoadMap();
     
-    // удалить из названия карты неразрешенные символы в имени файла
-    $bad = array_merge( array_map('chr', range(0,31)), array("<", ">", ":", '"', "/", "\\", "|", "?", "*"));
-    $filename = str_replace($bad, '', $this->Header->MapName);
-    
     // хеш содержимого карты
-    #$hash = md5( $nmap->GetMapStream()() );
+    $filename = md5( $nmap->GetMapBytes() );
     
     $nmap->SaveMap($filename);
 

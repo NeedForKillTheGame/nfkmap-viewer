@@ -6,7 +6,7 @@
 // Author: HarpyWar (harpywar@gmail.com)
 // Webpage: http://harpywar.com
 // Project page: https://github.com/HarpyWar/nfkmap-viewer
-// Version: 04.01.2013
+// Version: 13.01.2013
 // Requirements: PHP >=5.3 with enabled extensions: php_gd2, php_bz2
 // ----------------------------------------------------------
 class NFKMap
@@ -86,40 +86,11 @@ class NFKMap
 		
 		// initial empty map
 		$this->Header = new THeader();
+		
+		if ($this->debug)
+			@mkdir('debug');
 	}
 
-	// save map image into png file
-	// $thumbnail - map title (if exist then create thumbnail file)
-	// $thumb_size - max size of thumbnail
-	public function SaveMapImage($filename = false, $thumbnail = false, $thumb_size = 350)
-	{
-		if (!$filename)
-			$filename = $this->getFileName();
-			
-		if (!$this->image)
-			$this->DrawMap();
-
-		imagepng($this->image, $filename . ".png");
-		
-		if ($thumbnail)
-		{
-			$title = sprintf("%s (%sx%s)", $this->getFileName($thumbnail), $this->Header->MapSizeX, $this->Header->MapSizeY);
-			$im = resizeImage($this->image, $thumb_size, $title);
-			imagejpeg( $im, $filename . "_thumb.jpg", 75);
-		}
-	}
-
-	// return map image bytes
-	public function ShowImage()
-	{
-		if (!$this->image)
-			$this->DrawMap();
-	
-		header('Content-Type: image/png; filename="' . $this->Header->MapName . '"');
-		
-		imagepng($this->image);
-		#return ob_get_contents(); // return bytes
-	}	
 	
 	// save map bytes to a mapa file
 	public function SaveMap($filename = false)
@@ -129,11 +100,44 @@ class NFKMap
 	
 
 		// write generated data to a file
-		file_put_contents($filename . '.mapa', $this->GetMapStream() );
+		file_put_contents($filename . '.mapa', $this->GetMapBytes() );
 	}
 	
-	// return map binary string
-	public function GetMapStream()
+	
+	// return map name from file name (without extension)
+	public function GetFileName($filename = false)
+	{
+		if (!$filename)
+			$filename = basename($this->filename);
+			
+		return preg_replace("/\\.[^.\\s]{3,4}$/", "", $filename);
+	}
+	
+
+	
+	// return palette image gd object
+	public function GetPaletteImage()
+	{
+		if ( isset($this->imres['custom_palette']) )
+			return $this->imres['custom_palette'];
+		
+		return false;
+	}
+	// return original palette bmp bytes
+	public function GetPaletteBytes()
+	{
+		return $this->custom_palette_bin;
+	}
+
+	
+	// return map image gd object
+	public function GetMapImage()
+	{
+		return $this->image;
+	}
+	
+	// generate and return map binary string
+	public function GetMapBytes()
 	{
 		$this->stream = '';
 
@@ -591,7 +595,7 @@ class NFKMap
 			}
 		}
 		
-		return $this;
+		return $this->image;
 	}
 	
 	
@@ -635,8 +639,11 @@ class NFKMap
 		imagecolortransparent($brick, $color);
 		
 		
-		#if ($this->debug) // save each brick as single image
-		#imagepng($brick, "bricks\\$index.png");
+		if ($this->debug) // save each brick as single image
+		{
+			#@mkdir('bricks');
+			#imagepng($brick, "bricks/$index.png");
+		}
 		
 		return $brick;
 	}
@@ -754,7 +761,13 @@ class NFKMap
 	// preload image resources
 	private function loadResources()
 	{
-		$this->imres['palette'] = imagecreatefrompng('data/palette.png');
+		// absolute path to the data dir
+		$data_path = dirname(__FILE__) . '/data/';
+	
+		if ( !file_exists($data_path) || !is_dir($data_path) )
+			die('Place "data" directory with the script');
+			
+		$this->imres['palette'] = imagecreatefrompng($data_path . 'palette.png');
 		// set palette transparent color
 		$color = imagecolorat($this->imres['palette'], 0, 0); // get first pixel color
 		imagecolortransparent($this->imres['palette'], $color);
@@ -762,22 +775,22 @@ class NFKMap
 		if ($this->background !== false)
 		{
 			// if background index was not set then use MAP background
-			$bg_filename = 'data/bg_' . (($this->background !== null) ? $this->background : $this->Header->BG) . '.jpg';
+			$bg_filename = $data_path . 'bg_' . (($this->background !== null) ? $this->background : $this->Header->BG) . '.jpg';
 
 			if ( file_exists( $bg_filename ) )
 				$this->imres['bg'] = imagecreatefromjpeg($bg_filename);
 		}
 	
-		$this->imres['portal'] = imagecreatefrompng('data/portal.png');
-		$this->imres['door'] = imagecreatefrompng('data/door.png');
-		$this->imres['button'] = imagecreatefrompng('data/button.png');
+		$this->imres['portal'] = imagecreatefrompng($data_path . 'portal.png');
+		$this->imres['door'] = imagecreatefrompng($data_path . 'door.png');
+		$this->imres['button'] = imagecreatefrompng($data_path . 'button.png');
 		
 		if ($this->replacefineimages)
 		{
-			$this->imres['fine_armor'] = imagecreatefrompng('data/fine_armor.png');
-			$this->imres['fine_flag'] = imagecreatefrompng('data/fine_flag.png');
-			$this->imres['fine_power'] = imagecreatefrompng('data/fine_power.png');
-			$this->imres['fine_mega'] = imagecreatefrompng('data/fine_mega.png');
+			$this->imres['fine_armor'] = imagecreatefrompng($data_path . 'fine_armor.png');
+			$this->imres['fine_flag'] = imagecreatefrompng($data_path . 'fine_flag.png');
+			$this->imres['fine_power'] = imagecreatefrompng($data_path . 'fine_power.png');
+			$this->imres['fine_mega'] = imagecreatefrompng($data_path . 'fine_mega.png');
 		}
 	}
 	
@@ -890,15 +903,7 @@ class NFKMap
 		
 		return $data;
 	}
-		
-	// return map name from file name (without extension)
-	private function getFileName($filename = false)
-	{
-		if (!$filename)
-			$filename = basename($this->filename);
-			
-		return preg_replace("/\\.[^.\\s]{3,4}$/", "", $filename);
-	}
+
 	
 
 	public function __destruct()
@@ -993,6 +998,13 @@ function hexcoloralloc($im, $hex)
   return imagecolorallocate($im, $a, $b, $c); 
 } 
 
+// example: ff0000 -> 0000ff
+function inverseHex( $hex )
+{
+	$newhex = array_reverse( str_split($hex, 2) );
+	return implode($newhex);
+}
+
 // draw arrow
 function arrow($im, $x1, $y1, $x2, $y2, $alength, $awidth, $color)
 {
@@ -1017,56 +1029,6 @@ function arrow($im, $x1, $y1, $x2, $y2, $alength, $awidth, $color)
 
     imageline($im, $x1, $y1, $dx, $dy, $color);
     imagefilledpolygon($im, array($x2, $y2, $x3, $y3, $x4, $y4), 3, $color);
-}
-
-// return hanged
-function resizeImage($src, $max_size = 200, $text=false)
-{
-	list($tn_width, $tn_height) = getpropsize(imagesx($src), imagesy($src), $max_size);
-	
-	
-	$im=imagecreatetruecolor($tn_width,$tn_height);
-	imagecopyresampled($im,$src,0,0,0,0,$tn_width, $tn_height,imagesx($src), imagesy($src));
-	
-	// text
-	if ($text)
-	{
-		// black
-		$bar_color = imagecolorallocatealpha($im, 0, 0, 0, 80);
-		
-		imagefilledrectangle($im, 0, $tn_height-20, $tn_width, $tn_height, $bar_color);
-		
-		$txt_color = imagecolorallocate($im, 255, 255, 255);
-		$txt_file = "data/arial.ttf";
-		$txt_fontsize = 10.5;
-
-		imagettftext ($im, $txt_fontsize, 0,  10, $tn_height-6, $txt_color, $txt_file, $text);
-	}
-
-	return $im;
-}
-
-// return prop small size from the source size
-function getpropsize($width, $height, $max)
-{
-	if ($width <= $max and $height <= $max)
-		return array($width, $height);
-		
-	$lager = ($width > $height) ? $width : $height; //  сторона, которая длиннее
-	
-	$k = $lager / $max; // во сколько раз уменьшить
-
-	$w = @round($width / $k); // 1%
-	$h = @round($height / $k); // 1%
-
-	return array($w, $h);
-}
-
-// example: ff0000 -> 0000ff
-function inverseHex( $hex )
-{
-	$newhex = array_reverse( str_split($hex, 2) );
-	return implode($newhex);
 }
 
 
