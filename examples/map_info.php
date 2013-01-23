@@ -3,11 +3,12 @@
 
 require_once("../nfkmap.class.php");
 
+use NFK\MapViewer\MapViewer;
 
 $filename = "cpm3.mapa";
 
 // create map object
-$nmap = new NFKMap($filename);
+$nmap = new MapViewer($filename);
 
 // load map data in memory
 $nmap->LoadMap();

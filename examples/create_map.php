@@ -4,14 +4,15 @@
 require_once("../nfkmap.class.php");
 require_once("../mapobj.class.php");
 
+use NFK\MapViewer\MapViewer;
 
 $filename = "test.mapa";
 
-$nmap = new NFKMap($filename);
+$nmap = new MapViewer($filename);
 
 $nmap->Header->MapName = 'Example map created from PHP';
 $nmap->Header->Author = 'HarpyWar';
-$nmap->Header->MapSizeX = 15; // map height (20 by default)
+$nmap->Header->MapSizeX = 15; // map width (20 by default)
 $nmap->Header->MapSizeY = 8; // map height (30 by default)
 
 // next code fills map border with brick #228
@@ -21,10 +22,10 @@ for ($x = 0; $x < $nmap->Header->MapSizeX; $x++)
 			$nmap->Bricks[$x][$y] = 228;
 
 // create respawn on the left corner
-$nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = SimpleObject::Respawn();
+$nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = NFK\MapViewer\SimpleObject::Respawn();
 
 // create portal in the right corner, it will teleport player to the left corner
-$obj = SpecialObject::Teleport
+$obj = NFK\MapViewer\SpecialObject::Teleport
 (
 	$nmap->Header->MapSizeX - 2, // x
 	$nmap->Header->MapSizeY - 2, // y

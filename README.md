@@ -16,8 +16,9 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
 Сохранение полноразмерного изображения из существующей карты:
 
     require_once("nfkmap.class.php");
+	use NFK\MapViewer;
 	
-    $nmap = new NFKMap("tourney4.mapa");
+    $nmap = new MapViewer("tourney4.mapa");
 	$nmap->LoadMap();
     $im = $nmap->DrawMap();
     imagepng($im, $nmap->GetFileName() . '.png');
@@ -28,8 +29,8 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
     
     // хелпер для удобного создания объектов и более понятного кода
     require_once("mapobj.class.php");
-    
-    $nmap = new NFKMap("test.mapa");
+
+    $nmap = new MapViewer("test.mapa");
     
     // следующий код заполнит бриками границу карты
     for ($x = 0; $x < $nmap->Header->MapSizeX; $x++)
@@ -38,10 +39,10 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
     			$nmap->Bricks[$x][$y] = 228;
     
     // респавн в левом нижнем углу
-    $nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = SimpleObject::Respawn();
+    $nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = NFK\MapViewer\SimpleObject::Respawn();
     
     // установим в правом нижнем углу портал, с телепортом в левый нижний угол
-    $obj = SpecialObject::Teleport
+    $obj = NFK\MapViewer\SpecialObject::Teleport
     (
     	$nmap->Header->MapSizeX - 2, // x
     	$nmap->Header->MapSizeY - 2, // y
@@ -66,7 +67,26 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
     $nmap->SaveMap($filename);
 
 
+### Использования памяти
+
+На очень больших картах может потребоваться большое количество памяти для создания изображения.
+Поэтому, в скрипте желательно убрать ограничение памяти, или установить его до максимально возможного значения:
+
+    ini_set('memory_limit', '-1');
+    ini_set('memory_limit', '256M');
+
+Расход памяти на примере большой карты http://ge.tt/5uyLLIW/v/0
+* 0.7 мб до загрузки карты
+* 5.7 мб после загрузки карты в память
+* 6.7 мб после загрузки ресурсов (картинки палитры и объектов)
+* 151 мб после создания слоя карты через `imagecreatetruecolor` размером 7776х3888 px
+* 151 мб после рисования всех объектов
+* 237 мб после сохранения картинки через `imagepng` 
+
+Замер производился функцией `memory_get_peak_usage`
+
 <br>
+
 ### Разбор формата карты
 
 * [Специальные объекты на карте](https://github.com/HarpyWar/nfkmap-viewer/wiki/Специальные-объекты-на-карте)

@@ -3,14 +3,16 @@
 
 require_once("../nfkmap.class.php");
 
-// php gd can allocate ~64MB of RAM for when drawing a very large map (250x250) 
+use NFK\MapViewer\MapViewer;
+
+// PHP GD can allocate ~256MB of RAM for when drawing a very large map (250x250)
 ini_set('memory_limit', '-1');
 
 
 $filename = "cpm3.mapa";
 
 // create map object
-$nmap = new NFKMap($filename);
+$nmap = new MapViewer($filename);
 
 // load map data in memory
 $nmap->LoadMap();

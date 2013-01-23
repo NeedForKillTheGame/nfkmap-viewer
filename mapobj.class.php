@@ -6,6 +6,8 @@
 // (c) 2013, HarpyWar
 
 
+namespace NFK\MapViewer;
+
 // -- SPECIAL OBJECTS --
 //
 // each method return object of TMapObj

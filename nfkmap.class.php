@@ -6,10 +6,13 @@
 // Author: HarpyWar (harpywar@gmail.com)
 // Webpage: http://harpywar.com
 // Project page: https://github.com/HarpyWar/nfkmap-viewer
-// Version: 13.01.2013
+// Version: 24.01.2013
 // Requirements: PHP >=5.3 with enabled extensions: php_gd2, php_bz2
 // ----------------------------------------------------------
-class NFKMap
+
+namespace NFK\MapViewer;
+
+class MapViewer
 {
 	/* --- SETUP START --- */
 	
@@ -86,9 +89,6 @@ class NFKMap
 		
 		// initial empty map
 		$this->Header = new THeader();
-		
-		if ($this->debug)
-			@mkdir('debug');
 	}
 
 	
@@ -241,7 +241,7 @@ class NFKMap
 	public function LoadMap()
 	{
 		if (!$this->handle = @fopen($this->filename, 'r'))
-			throw new Exception("Can't open file " . $this->filename);
+			throw new \Exception("Can't open file " . $this->filename);
 
 		// if file is a demo
 		if ( $this->getString(7) == "NFKDEMO")
@@ -265,8 +265,8 @@ class NFKMap
 			rewind($this->handle);
 			
 			
-			#if ($this->debug)
-			#	file_put_contents('test.ndm', stream_get_contents($this->handle));
+			if ($this->debug)
+				file_put_contents('decompressed.ndm', stream_get_contents($this->handle));
 		}
 		$this->pos = 0;
 		$this->stream = '';
@@ -276,11 +276,11 @@ class NFKMap
 		
 		$this->Header->ID = $this->getString(4);
 		if ($this->Header->ID != "NMAP" && $this->Header->ID != "NDEM")
-			throw new Exception($this->filename . " is not NFK map/demo");
+			throw new \Exception($this->filename . " is not NFK map/demo");
 
 		$this->Header->Version = $this->getByte();
 		if ($this->Header->Version < 3 || $this->Header->Version > 7)
-			throw new Exception("Incorrect map version");
+			throw new \Exception("Incorrect map version");
 		
 		
 		$b = $this->getByte(); // size of next readable string
@@ -429,6 +429,10 @@ class NFKMap
 		if ($this->debug)
 			print_r($this);
 			
+		if ($this->debug)
+			echo "Memory after LoadMap: " . memory_get_peak_usage() /1024/1024 . "<br>";
+
+			
 		return $this;
 	}
 
@@ -438,14 +442,20 @@ class NFKMap
 	{
 		// load image resources
 		$this->loadResources();
-	
+
+		if ($this->debug)
+			echo "Memory after loadResources: " . memory_get_peak_usage() /1024/1024 . "<br>";
+
+		
 		$width = $this->Header->MapSizeX * $this->brick_w;
 		$height = $this->Header->MapSizeY * $this->brick_h;
 
 
 		// create map layer
 		$this->image = imagecreatetruecolor($width, $height);
-
+		
+		if ($this->debug)
+			echo "Memory after imagecreatetruecolor: " . memory_get_peak_usage() /1024/1024 . "<br>";
 		
 		// fill image with repeated background
 		if ( isset($this->imres['bg']) )
@@ -594,6 +604,10 @@ class NFKMap
 					break;
 			}
 		}
+		
+		if ($this->debug)
+			echo "Memory after DrawMap: " . memory_get_peak_usage() /1024/1024 . "<br>";
+
 		
 		return $this->image;
 	}

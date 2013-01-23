@@ -4,11 +4,12 @@
 require_once("../nfkmap.class.php");
 require_once("../mapobj.class.php");
 
+use NFK\MapViewer\MapViewer;
 
 $filename = "cpm3.mapa";
 
 // create map object
-$nmap = new NFKMap($filename);
+$nmap = new MapViewer($filename);
 
 // load map data in memory
 $nmap->LoadMap();
@@ -18,7 +19,7 @@ $nmap->LoadMap();
 $nmap->Header->MapName .= ' (modified from PHP)';
 
 // add quaddamage
-$nmap->Bricks[5][12] = SimpleObject::PowerupQuaddamage();
+$nmap->Bricks[5][12] = NFK\MapViewer\SimpleObject::PowerupQuaddamage();
 
 
 // save edited mapa file
