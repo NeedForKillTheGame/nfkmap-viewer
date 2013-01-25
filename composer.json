@@ -1,0 +1,27 @@
+{
+    "name": "nfk/mapviewer",
+    "description": "NFK Map Viewer",
+    "keywords": ["library"],
+    "homepage": "http://needforkill.com",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "HarpyWar",
+            "email": "harpywar@gmail.com",
+        }
+    ],
+    "require": {
+        "php": ">=5.3.3",
+        "ext-gd2": "*",
+        "ext-bz2": "*"
+    },
+    "autoload": {
+        "psr-0": { "NFK\\MapViewer": "" }
+    },
+    "target-dir": "NFK/MapViewer",
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0.x-dev"
+        }
+    }
+}
