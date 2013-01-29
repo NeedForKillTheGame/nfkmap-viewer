@@ -18,7 +18,6 @@
     "autoload": {
         "psr-0": { "NFK\\MapViewer": "lib/" }
     },
-    "target-dir": "NFK/MapViewer",
     "extra": {
         "branch-alias": {
             "dev-master": "1.0.x-dev"
