@@ -16,7 +16,7 @@
         "ext-bz2": "*"
     },
     "autoload": {
-        "psr-0": { "NFK\\MapViewer": "" }
+        "psr-0": { "NFK\\MapViewer": "lib/NFK/MapViewer/" }
     },
     "target-dir": "NFK/MapViewer",
     "extra": {

@@ -11,6 +11,38 @@ NFK Map Viewer
 PHP >= 5.3 с включенными расширениями `php_gd2` и `php_bz2`
 
 
+### Установка через Composer
+
+Менеджер пакетов [Composer](http://getcomposer.org) упрощает установку сторонних скриптов в вашем проекте. Он сам загрузит необходимые файлы и добавит их в `vendor/autoload.php`, который будет достаточно включить в начале вашего скрипта.
+
+1. Откройте папку, где будет размещен NFK Map Viewer, и создайте в ней файл `composer.json` со следующим содержимым:
+    
+        {
+            "minimum-stability": "dev",
+            "require": {
+                "nfk/mapviewer":"dev-master"
+            }
+        }
+    
+2. Положите в эту папку файл http://getcomposer.org/composer.phar и выполните команду:
+    
+        php composer.phar install
+    
+3. После установки пакета должна появиться папка `vendor`, внутри которой, помимо автозагрузчика composer'a, расположены исходники MapViewer.
+
+4. Теперь в начале вашего скрипта достаточно включить загрузочный файл, после чего можно использовать MapViewer:
+    
+        include "vendor/autoload.php";
+
+		
+### Обычная установка
+
+Если вы не используете Composer, то в начале своего скрипта добавьте встроенный автозагрузчик:
+
+    include("lib/autoloader.php");
+    Autoloader::register();
+    
+
 ### Примеры использования (более подробно в examples):
 
 Сохранение полноразмерного изображения из существующей карты:
@@ -26,9 +58,9 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
 	
 Можно создать свою карту, или изменить существующую:
     
-    // хелперы для удобного создания объектов и более понятного кода
-    use NFK\MapViewer\SimpleObject
-    use NFK\MapViewer\SpecialObject
+    // хелперы для удобного создания объектов
+    use NFK\MapViewer\MapObject\SimpleObject
+    use NFK\MapViewer\MapObject\SpecialObject
 
     $nmap = new MapViewer("test.mapa");
     
@@ -39,10 +71,10 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
     			$nmap->Bricks[$x][$y] = 228;
     
     // респавн в левом нижнем углу
-    $nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = NFK\MapViewer\SimpleObject::Respawn();
+    $nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = SimpleObject::Respawn();
     
     // установим в правом нижнем углу портал, с телепортом в левый нижний угол
-    $obj = NFK\MapViewer\SpecialObject::Teleport
+    $obj = SpecialObject::Teleport
     (
     	$nmap->Header->MapSizeX - 2, // x
     	$nmap->Header->MapSizeY - 2, // y
@@ -66,7 +98,7 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
     
     $nmap->SaveMap($filename);
 
-
+	
 ### Использование памяти
 
 На очень больших картах может потребоваться большое количество памяти для создания изображения.
