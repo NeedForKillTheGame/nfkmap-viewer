@@ -1,7 +1,10 @@
 <?php
 // create and save thumbnail image of map
 
-require_once("../nfkmap.class.php");
+// if you use a composer then just include('vendor/autoload.php');
+include("../lib/autoloader.php");
+Autoloader::register();
+
 
 use NFK\MapViewer\MapViewer;
 
@@ -9,7 +12,7 @@ use NFK\MapViewer\MapViewer;
 ini_set('memory_limit', '-1');
 
 
-$filename = "cpm3.mapa";
+$filename = "data/pro-dm0.mapa";
 
 // create map object
 $nmap = new MapViewer($filename);
@@ -61,7 +64,10 @@ function resizeImage($src, $max_size = 200, $text = false)
 		imagefilledrectangle($im, 0, $tn_height-20, $tn_width, $tn_height, $bar_color);
 		
 		$txt_color = imagecolorallocate($im, 255, 255, 255);
-		$txt_file = "../data/arial.ttf";
+		$txt_file = "data/arial.ttf";
+		if (!file_exists($txt_file))
+			die('can\'t find font arial.ttf');
+			
 		$txt_fontsize = 10.5;
 
 		imagettftext ($im, $txt_fontsize, 0,  10, $tn_height-6, $txt_color, $txt_file, $text);

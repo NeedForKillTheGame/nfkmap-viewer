@@ -1,12 +1,15 @@
 <?php
 // edit exist map
 
-require_once("../nfkmap.class.php");
-require_once("../mapobj.class.php");
+// if you use a composer then just include('vendor/autoload.php');
+include("../lib/autoloader.php");
+Autoloader::register();
+
 
 use NFK\MapViewer\MapViewer;
+use NFK\MapViewer\MapObject\SimpleObject;
 
-$filename = "cpm3.mapa";
+$filename = "data/pro-dm0.mapa";
 
 // create map object
 $nmap = new MapViewer($filename);
@@ -19,7 +22,7 @@ $nmap->LoadMap();
 $nmap->Header->MapName .= ' (modified from PHP)';
 
 // add quaddamage
-$nmap->Bricks[5][12] = NFK\MapViewer\SimpleObject::PowerupQuaddamage();
+$nmap->Bricks[5][12] = SimpleObject::PowerupQuaddamage();
 
 
 // save edited mapa file

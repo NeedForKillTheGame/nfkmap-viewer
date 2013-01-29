@@ -1,12 +1,16 @@
 <?php
 // create new example map
 
-require_once("../nfkmap.class.php");
-require_once("../mapobj.class.php");
+// if you use a composer then just include('vendor/autoload.php');
+include("../lib/autoloader.php");
+Autoloader::register();
+
 
 use NFK\MapViewer\MapViewer;
+use NFK\MapViewer\MapObject\SimpleObject;
+use NFK\MapViewer\MapObject\SpecialObject;
 
-$filename = "test.mapa";
+$filename = "data/test.mapa";
 
 $nmap = new MapViewer($filename);
 
@@ -22,10 +26,10 @@ for ($x = 0; $x < $nmap->Header->MapSizeX; $x++)
 			$nmap->Bricks[$x][$y] = 228;
 
 // create respawn on the left corner
-$nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = NFK\MapViewer\SimpleObject::Respawn();
+$nmap->Bricks[1][$nmap->Header->MapSizeY - 2] = SimpleObject::Respawn();
 
 // create portal in the right corner, it will teleport player to the left corner
-$obj = NFK\MapViewer\SpecialObject::Teleport
+$obj = SpecialObject::Teleport
 (
 	$nmap->Header->MapSizeX - 2, // x
 	$nmap->Header->MapSizeY - 2, // y

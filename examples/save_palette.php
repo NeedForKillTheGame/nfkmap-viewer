@@ -1,11 +1,14 @@
 <?php
 // create and save fullsize image of map
 
-require_once("../nfkmap.class.php");
+// if you use a composer then just include('vendor/autoload.php');
+include("../lib/autoloader.php");
+Autoloader::register();
+
 
 use NFK\MapViewer\MapViewer;
 
-$filename = "cpm3.mapa";
+$filename = "data/pro-dm0.mapa";
 
 // create map object
 $nmap = new MapViewer($filename);

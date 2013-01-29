@@ -1,11 +1,14 @@
 <?php
 // extract and save .mapa from .ndm file
 
-require_once("../nfkmap.class.php");
+// if you use a composer then just include('vendor/autoload.php');
+include("../lib/autoloader.php");
+Autoloader::register();
+
 
 use NFK\MapViewer\MapViewer;
 
-$filename = "demo.ndm";
+$filename = "data/demo.ndm";
 
 
 // create map object

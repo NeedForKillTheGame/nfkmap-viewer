@@ -15,8 +15,7 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
 
 Сохранение полноразмерного изображения из существующей карты:
 
-    require_once("nfkmap.class.php");
-	use NFK\MapViewer;
+	use NFK\MapViewer\MapViewer;
 	
     $nmap = new MapViewer("tourney4.mapa");
 	$nmap->LoadMap();
@@ -27,8 +26,9 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
 	
 Можно создать свою карту, или изменить существующую:
     
-    // хелпер для удобного создания объектов и более понятного кода
-    require_once("mapobj.class.php");
+    // хелперы для удобного создания объектов и более понятного кода
+    use NFK\MapViewer\SimpleObject
+    use NFK\MapViewer\SpecialObject
 
     $nmap = new MapViewer("test.mapa");
     

@@ -1,7 +1,10 @@
 <?php
 // show map map image in a browser
 
-require_once("../nfkmap.class.php");
+// if you use a composer then just include('vendor/autoload.php');
+include("../lib/autoloader.php");
+Autoloader::register();
+
 
 use NFK\MapViewer\MapViewer;
 
@@ -9,7 +12,7 @@ use NFK\MapViewer\MapViewer;
 ini_set('memory_limit', '-1');
 
 
-$filename = "cpm3.mapa";
+$filename = "pro-dm0.mapa";
 
 // create map object
 $nmap = new MapViewer($filename);
