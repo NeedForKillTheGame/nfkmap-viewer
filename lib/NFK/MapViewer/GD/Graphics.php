@@ -336,6 +336,38 @@ class Graphics extends Resource
 				$this->_drawFineItem('i_fine_power', $x, $y, 1);
 				break;
 
+			// respawns
+			case 34: // default
+			case 35: // red
+			case 36: // blue
+				$src_x = abs(34 - $index) * $this->brick_w;
+				$im = $this->getResource('i_fine_respawn');
+				
+				// flip respawn horizontally if it's in the right half of the map
+				if ($x > $this->Header->MapSizeX / 2)
+				{
+					$size_x = imagesx($im);
+					$size_y = imagesy($im);
+				
+					$tmp = imagecreatetruecolor($size_x, $size_y);
+					imagecolortransparent($tmp, imagecolorallocate($im, 0, 0, 0));
+					imagealphablending($tmp, false);
+					imagesavealpha($tmp, true);
+					
+					imagecopyresampled($tmp, $im, 0, 0, ($size_x-1), 0, $size_x, $size_y, 0-$size_x, $size_y);
+					
+					$im = $tmp;
+					$src_x = (36 - $index) * $this->brick_w;
+				}
+				
+				imagecopy($this->image, $im, 
+					$x * $this->brick_w, 
+					$y * $this->brick_h - $this->brick_h * 2, 
+					$src_x, 0, 
+					$this->brick_w, $this->brick_h * 3);
+				break;
+				
+				
 			// blue flag
 			case 40:
 				$size_x = 36;
@@ -415,6 +447,7 @@ class Graphics extends Resource
 			$this->setResource('i_fine_flag', imagecreatefrompng($data_path . 'fine_flag.png'));
 			$this->setResource('i_fine_power', imagecreatefrompng($data_path . 'fine_power.png'));
 			$this->setResource('i_fine_mega', imagecreatefrompng($data_path . 'fine_mega.png'));
+			$this->setResource('i_fine_respawn', imagecreatefrompng($data_path . 'fine_respawn.png'));
 		}
 	}
 	

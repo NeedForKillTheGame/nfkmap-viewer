@@ -12,7 +12,7 @@ use NFK\MapViewer\MapViewer;
 ini_set('memory_limit', '-1');
 
 
-$filename = "pro-dm0.mapa";
+$filename = "data/pro-dm0.mapa";
 
 // create map object
 $nmap = new MapViewer($filename);

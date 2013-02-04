@@ -37,7 +37,7 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
 		
 ### Обычная установка
 
-Если вы не используете Composer, то в начале своего скрипта добавьте встроенный автозагрузчик:
+Если вы не используете Composer, то в начале своего скрипта добавьте встроенный автозагрузчик классов:
 
     include("lib/autoloader.php");
     Autoloader::register();
@@ -54,7 +54,7 @@ PHP >= 5.3 с включенными расширениями `php_gd2` и `php_
     $im = $nmap->DrawMap();
     imagepng($im, $nmap->GetFileName() . '.png');
 
-![](http://habrastorage.org/storage2/9da/b58/0f1/9dab580f1202e3049eec694522530da2.png)
+![](http://habrastorage.org/storage2/8e8/8ee/88c/8e88ee88cacdc8530ab530b04439a3e5.png)
 	
 Можно создать свою карту, или изменить существующую:
     
