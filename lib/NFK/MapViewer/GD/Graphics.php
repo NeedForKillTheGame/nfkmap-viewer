@@ -368,6 +368,16 @@ class Graphics extends Resource
 				break;
 				
 				
+			// empty brick fill with cyan color
+			case 37:
+				imagefilledrectangle($this->image, 
+					$x * $this->brick_w, 
+					$y * $this->brick_h, 
+					$x * $this->brick_w + $this->brick_w - 1, 
+					$y * $this->brick_h + $this->brick_h - 1, 
+					imagecolorallocatealpha($this->image, 0, 255, 255, 100));
+				break;
+				
 			// blue flag
 			case 40:
 				$size_x = 36;
@@ -397,8 +407,8 @@ class Graphics extends Resource
 					$x * $this->brick_w, 
 					$y * $this->brick_h, 
 					$x * $this->brick_w + $this->brick_w - 1, 
-					$y * $this->brick_h + $this->brick_h, 
-					imagecolorallocatealpha($this->image, 255, 0, 0, 99));
+					$y * $this->brick_h + $this->brick_h - 1, 
+					imagecolorallocatealpha($this->image, 255, 0, 0, 100));
 				break;
 							
 			default: 
