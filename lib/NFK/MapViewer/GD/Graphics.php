@@ -229,9 +229,9 @@ class Graphics extends Resource
 	{
 		$pal = $this->getResource('i_palette');
 
-		if ($index >= 54 && $index <= 181)
+		if ($index >= 54)
 		{
-			if ( $this->getResource('i_custom_palette') )
+			if ( $index <= 181 && $this->getResource('i_custom_palette') )
 			{
 				$pal = $this->getResource('i_custom_palette');
 				$index -= 54;
