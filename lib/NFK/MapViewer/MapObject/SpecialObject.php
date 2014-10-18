@@ -59,7 +59,7 @@ class SpecialObject implements ISpecialObject
 		
 		$obj->x = $x;
 		$obj->y = $y;
-		$obj->orient = $color;
+		$obj->orient = $orient;
 		$obj->length = $length;		
 		$obj->wait = $wait;
 		$obj->targetname = $targetname;
