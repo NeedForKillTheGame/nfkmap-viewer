@@ -17,6 +17,7 @@ $nmap = new MapViewer($filename);
 $nmap->LoadMap();
 
 echo '<pre>';
+print_r($nmap->GetHash());
 print_r($nmap->Header);
 print_r($nmap->Bricks);
 print_r($nmap->Objects);

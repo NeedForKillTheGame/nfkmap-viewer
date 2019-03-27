@@ -18,8 +18,8 @@ $nmap = new MapViewer($filename);
 $nmap->LoadMap();
 
 
-// get map hash
-$filename = md5( $nmap->GetMapBytes() );
+// get unique map hash
+$filename = $nmap->GetHash() . ".mapa";
 
 // save mapa file
 $nmap->SaveMap($filename);

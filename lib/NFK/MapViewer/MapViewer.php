@@ -19,6 +19,7 @@ use NFK\MapViewer\Type\THeader;
 use NFK\MapViewer\Type\TLocationText;
 use NFK\MapViewer\Type\TMapEntry;
 use NFK\MapViewer\Type\TMapObj;
+use NFK\MapViewer\MapObject\SimpleObject;
 
 use NFK\MapViewer\GD\Graphics;
 
@@ -354,8 +355,11 @@ class MapViewer
 	}
 	
 	
+
 	// generate and return map binary string
-	public function GetMapBytes()
+	// $strip_dynamic_data return malformed map data to get a correct map hash from demo
+	//   
+	public function GetMapBytes($strip_dynamic_data = false)
 	{
 		$writer = new StreamWriter();
 
@@ -384,29 +388,46 @@ class MapViewer
 		// write bricks
 		for ($y = 0; $y < $this->Header->MapSizeY; $y++)
 			for ($x = 0; $x < $this->Header->MapSizeX; $x++)
-				$writer->putByte( isset($this->Bricks[$x][$y]) ? $this->Bricks[$x][$y] : 0 );
-		
-		// write objects
-		foreach($this->Objects as $tmapobj)
-		{
-			$writer->putBool($tmapobj->active);
-				$writer->putByte(0x03); // byte alignment
+			{
+				$brick = ( isset($this->Bricks[$x]) && isset($this->Bricks[$x][$y]) ) 
+					? $this->Bricks[$x][$y]
+					: 0;
 				
-			$writer->putWord($tmapobj->x);
-			$writer->putWord($tmapobj->y);
-			$writer->putWord($tmapobj->length);
-			$writer->putWord($tmapobj->dir);
-			$writer->putWord($tmapobj->wait);
-			$writer->putWord($tmapobj->targetname);
-			$writer->putWord($tmapobj->target);
-			$writer->putWord($tmapobj->orient);
-			$writer->putWord($tmapobj->nowanim);
-			$writer->putWord($tmapobj->special);
-			
-			$writer->putByte($tmapobj->objtype);
+				// NFK BUG: respawns in demo replaced from normal to red
+				if ($strip_dynamic_data)
+				{
+					if ($brick == SimpleObject::RedRespawn() || $brick == SimpleObject::BlueRespawn())
+						$brick = SimpleObject::Respawn();
+				}
+				
+				$writer->putByte($brick);
+			}
+
+		// NFK BUG: object properties are changed during a game and map saved with modified properties
+		if (!$strip_dynamic_data)
+		{
+			// write objects
+			foreach($this->Objects as $tmapobj)
+			{
+				$writer->putBool($tmapobj->active);
 				$writer->putByte(0x03); // byte alignment
+					
+				$writer->putWord($tmapobj->x);
+				$writer->putWord($tmapobj->y);
+				$writer->putWord($tmapobj->length);
+				$writer->putWord($tmapobj->dir);
+				$writer->putWord($tmapobj->wait);
+				$writer->putWord($tmapobj->targetname);
+				$writer->putWord($tmapobj->target);
+				$writer->putWord($tmapobj->orient);
+				$writer->putWord($tmapobj->nowanim);
+				$writer->putWord($tmapobj->special);
+				
+				$writer->putByte($tmapobj->objtype);
+				$writer->putByte(0x03); // byte alignment
+			}
 		}
-		
+					
 		// write map palette
 		if ( $this->graphics->getResource('i_custom_palette') )
 		{
@@ -426,7 +447,7 @@ class MapViewer
 			
 			$writer->putString($pal_bz); 
 		}
-
+		
 		// write locations
 		if ($this->Locations && count($this->Locations) > 0)
 		{
@@ -453,6 +474,12 @@ class MapViewer
 		}
 		
 		return $writer->stream();
+	}
+	
+	// return map hash without dynamic info, to get same hash
+	public function GetHash()
+	{
+		return md5( $this->GetMapBytes(true) );
 	}
 	
 
