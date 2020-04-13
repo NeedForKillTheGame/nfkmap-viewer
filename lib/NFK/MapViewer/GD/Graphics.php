@@ -253,13 +253,13 @@ class Graphics extends Resource
 		// copy brick from the palette
 		imagecopy($brick, $pal, 0, 0, $x, $y, $this->brick_w, $this->brick_h);
 		
+		
 		// get transparent color of palette
-		$color = imagecolortransparent($pal);
+		$color = imagecolorallocate($pal, 0, 0, 0);
 		
 		#if ($this->debug)
 		#	echo '<br>color: ' . $color;
 
-		
 		// set brick transparent color
 		imagecolortransparent($brick, $color);
 		
